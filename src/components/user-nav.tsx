@@ -17,6 +17,7 @@ import { signOut } from 'firebase/auth';
 import Link from 'next/link';
 import { Skeleton } from './ui/skeleton';
 import { useAuth } from '@/firebase';
+import { useRouter } from 'next/navigation';
 
 type UserNavProps = {
   user: FirebaseUser | null;
@@ -25,8 +26,11 @@ type UserNavProps = {
 
 export function UserNav({ user, loading }: UserNavProps) {
   const auth = useAuth();
+  const router = useRouter();
+
   const handleLogout = async () => {
     await signOut(auth);
+    router.push('/login');
   };
 
   if (loading) {
@@ -61,17 +65,23 @@ export function UserNav({ user, loading }: UserNavProps) {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem>
-            <UserIcon className="me-2 h-4 w-4" />
-            <span>الملف الشخصي</span>
+          <DropdownMenuItem asChild>
+            <Link href="/settings">
+                <UserIcon className="me-2 h-4 w-4" />
+                <span>الملف الشخصي</span>
+            </Link>
           </DropdownMenuItem>
-          <DropdownMenuItem>
-            <CreditCard className="me-2 h-4 w-4" />
-            <span>الفوترة</span>
+          <DropdownMenuItem asChild>
+             <Link href="/settings">
+                <CreditCard className="me-2 h-4 w-4" />
+                <span>الفوترة</span>
+            </Link>
           </DropdownMenuItem>
-          <DropdownMenuItem>
-            <Settings className="me-2 h-4 w-4" />
-            <span>الإعدادات</span>
+          <DropdownMenuItem asChild>
+            <Link href="/settings">
+                <Settings className="me-2 h-4 w-4" />
+                <span>الإعدادات</span>
+            </Link>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
