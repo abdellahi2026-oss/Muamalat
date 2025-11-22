@@ -88,13 +88,24 @@ export default function LoginPage() {
       router.push('/');
     } catch (error) {
       let message = 'حدث خطأ غير متوقع.';
-      if (error instanceof Error && (error.message === 'User not found' || error.message.includes('invalid-credential'))) {
-          message = 'اسم المستخدم أو كلمة المرور غير صحيحة.';
-      } else if ((error as AuthError).code) {
-        const authError = error as AuthError;
-        if (authError.code === 'auth/user-not-found' || authError.code === 'auth/wrong-password' || authError.code === 'auth/invalid-credential') {
+      const firebaseError = error as AuthError;
+
+      if (firebaseError.code) {
+        switch (firebaseError.code) {
+          case 'auth/user-not-found':
+          case 'auth/wrong-password':
+          case 'auth/invalid-credential':
             message = 'اسم المستخدم أو كلمة المرور غير صحيحة.';
+            break;
+          case 'auth/too-many-requests':
+            message = 'تم حظر الوصول مؤقتًا بسبب كثرة محاولات تسجيل الدخول الفاشلة.';
+            break;
+          default:
+            message = 'حدث خطأ غير معروف أثناء تسجيل الدخول.';
+            break;
         }
+      } else if (error instanceof Error && error.message === 'User not found') {
+          message = 'اسم المستخدم أو كلمة المرور غير صحيحة.';
       }
       
       toast({
