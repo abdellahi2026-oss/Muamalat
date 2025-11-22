@@ -23,14 +23,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from './ui/button';
-import { useFirebase, useDoc, useMemoFirebase, useUser } from '@/firebase';
+import { useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 
 
 export function MainNav() {
   const pathname = usePathname();
-  const { user, firestore, isUserLoading } = useFirebase();
+  const { user, firestore, isUserLoading } = useUser();
 
   const userDocRef = useMemoFirebase(() => {
     if (!user || !firestore) return null;

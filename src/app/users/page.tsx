@@ -28,17 +28,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Loader2, PlusCircle } from 'lucide-react';
+import { MoreHorizontal, Loader2, PlusCircle, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useRouter } from 'next/navigation';
 import { AddUserDialog } from '@/components/add-user-dialog';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function UsersPage() {
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
-  const router = useRouter();
   const { toast } = useToast();
   
   const userDocRef = useMemoFirebase(() => {
@@ -51,22 +50,13 @@ export default function UsersPage() {
   const [updatingUsers, setUpdatingUsers] = useState<string[]>([]);
   
   const usersQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    // Query will only run if the current user is an admin, based on Firestore rules.
-    // The UI guard is handled by the navigation components.
+    // Only create the query if the current user is an admin.
+    // The useCollection hook will handle the case where the query is null.
+    if (!firestore || currentUserData?.role !== 'admin') return null;
     return collection(firestore, 'users');
-  }, [firestore]);
+  }, [firestore, currentUserData]);
 
   const { data: users, isLoading: areUsersLoading, error: usersError } = useCollection<User>(usersQuery);
-
-  useEffect(() => {
-    // This effect handles the case where a non-admin tries to access the URL directly.
-    // The primary navigation guard is hiding the link, but this is a fallback.
-    const isDataReady = !isUserLoading && !isCurrentUserLoading;
-    if (isDataReady && currentUserData?.role !== 'admin') {
-      router.push('/');
-    }
-  }, [currentUserData, isUserLoading, isCurrentUserLoading, router]);
 
   const handleUpdateUser = async (userId: string, updates: Partial<User>) => {
     if (!firestore) return;
@@ -122,6 +112,8 @@ export default function UsersPage() {
   };
 
   const isLoading = isUserLoading || isCurrentUserLoading;
+  const isDataReady = !isLoading;
+  const isAdmin = currentUserData?.role === 'admin';
 
   if (isLoading) {
     return (
@@ -131,8 +123,19 @@ export default function UsersPage() {
     );
   }
 
-  // After loading, if the user is confirmed not to be an admin, the useEffect will handle the redirect.
-  // We can render the content assuming they are an admin, or the redirect will occur.
+  if (isDataReady && !isAdmin) {
+      return (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>وصول مرفوض</AlertTitle>
+            <AlertDescription>
+                ليس لديك الصلاحيات اللازمة لعرض هذه الصفحة.
+            </AlertDescription>
+         </Alert>
+      )
+  }
+
+  // Render the page for the admin
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">

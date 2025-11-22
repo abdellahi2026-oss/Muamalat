@@ -54,7 +54,7 @@ export function UserNav() {
     );
   }
 
-  const displayName = user.displayName || user.email;
+  const displayName = userData?.name || user.displayName || user.email;
   const displayEmail = user.email;
   const isAdmin = userData?.role === 'admin';
 
