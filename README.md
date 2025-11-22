@@ -1,4 +1,4 @@
-# Firebase Studio
+git commit -m "Fix password input direction to LTR"# Firebase Studio
 
 This is a NextJS starter in Firebase Studio.
 
