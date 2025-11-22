@@ -29,7 +29,7 @@ export default function WakalahPage() {
 
   const contractsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
-    return query(collectionGroup(firestore, `wakalahContracts`), where('clientId', '==', user.uid));
+    return query(collectionGroup(firestore, 'wakalahContracts'), where('clientId', '==', user.uid));
   }, [firestore, user?.uid]);
 
   const { data: wakalahContracts, isLoading } = useCollection<WakalahContract>(contractsQuery);

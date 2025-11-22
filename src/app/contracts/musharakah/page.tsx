@@ -30,7 +30,7 @@ export default function MusharakahPage() {
 
   const contractsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
-    return query(collectionGroup(firestore, `musharakahContracts`), where('partnerIds', 'array-contains', user.uid));
+    return query(collectionGroup(firestore, 'musharakahContracts'), where('partnerIds', 'array-contains', user.uid));
   }, [firestore, user?.uid]);
 
   const { data: musharakahContracts, isLoading } = useCollection<MusharakahContract>(contractsQuery);

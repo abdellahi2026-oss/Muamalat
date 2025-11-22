@@ -29,7 +29,7 @@ export default function MurabahaPage() {
 
   const contractsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
-    return query(collectionGroup(firestore, `murabahaContracts`), where('clientId', '==', user.uid));
+    return query(collectionGroup(firestore, 'murabahaContracts'), where('clientId', '==', user.uid));
   }, [firestore, user?.uid]);
 
   const { data: murabahaContracts, isLoading } = useCollection<MurabahaContractType>(contractsQuery);
