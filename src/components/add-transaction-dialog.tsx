@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -44,49 +43,78 @@ import { collection, addDoc, doc, setDoc } from 'firebase/firestore';
 import { useFirebase, useFirestore } from '@/firebase';
 import { Calendar } from './ui/calendar';
 
-const baseSchema = z.object({
+// A single, unified schema for all contract types.
+// Fields specific to one contract type are marked as optional.
+const formSchema = z.object({
+  contractType: z.enum(['murabaha', 'mudarabah', 'musharakah', 'wakalah']),
   clientName: z.string().min(3, { message: 'يجب أن يكون اسم العميل 3 أحرف على الأقل.' }),
   startDate: z.date({ required_error: 'يجب إدخال تاريخ البدء.' }),
   endDate: z.date({ required_error: 'يجب إدخال تاريخ الانتهاء.' }),
-});
 
-const murabahaSchema = baseSchema.extend({
-    contractType: z.literal('murabaha'),
-    goods: z.string().min(2, { message: 'يجب إدخال وصف للسلعة.' }),
-    units: z.coerce.number().positive({ message: 'يجب أن تكون الكمية رقمًا موجبًا.' }),
-    purchasePrice: z.coerce.number().positive({ message: 'يجب أن يكون سعر الشراء رقمًا موجبًا.' }),
-    sellingPrice: z.coerce.number().positive({ message: 'يجب أن يكون سعر البيع رقمًا موجبًا.' }),
-}).refine((data) => data.sellingPrice > data.purchasePrice, {
-    message: 'سعر البيع يجب أن يكون أكبر من سعر الشراء.',
-    path: ['sellingPrice'],
-});
+  // Murabaha specific
+  goods: z.string().optional(),
+  units: z.coerce.number().optional(),
+  purchasePrice: z.coerce.number().optional(),
+  sellingPrice: z.coerce.number().optional(),
 
-const mudarabahSchema = baseSchema.extend({
-    contractType: z.literal('mudarabah'),
-    capital: z.coerce.number().positive({ message: 'يجب أن يكون رأس المال رقمًا موجبًا.' }),
-    profitSharingRatio: z.coerce.number().min(1).max(99, { message: 'يجب أن تكون النسبة بين 1 و 99.' }),
-    investmentArea: z.string().min(3, { message: 'يجب إدخال مجال الاستثمار.' }),
-});
+  // Mudarabah specific
+  capital: z.coerce.number().optional(),
+  profitSharingRatio: z.coerce.number().optional(),
+  investmentArea: z.string().optional(),
 
-const musharakahSchema = baseSchema.extend({
-    contractType: z.literal('musharakah'),
-    amount: z.coerce.number().positive({ message: 'يجب أن يكون إجمالي المساهمة رقمًا موجبًا.' }),
-    profitDistribution: z.string().min(3, { message: 'يجب توضيح كيفية توزيع الأرباح.' }),
-});
+  // Musharakah & Wakalah specific
+  amount: z.coerce.number().optional(),
 
-const wakalahSchema = baseSchema.extend({
-    contractType: z.literal('wakalah'),
-    agentName: z.string().min(3, { message: 'يجب أن يكون اسم الوكيل 3 أحرف على الأقل.' }),
-    amount: z.coerce.number().positive({ message: 'يجب أن تكون رسوم الوكالة رقمًا موجبًا.' }),
-    agencyType: z.string().min(3, { message: 'يجب إدخال نوع الوكالة.' }),
-});
+  // Musharakah specific
+  profitDistribution: z.string().optional(),
+  
+  // Wakalah specific
+  agentName: z.string().optional(),
+  agencyType: z.string().optional(),
 
-const formSchema = z.discriminatedUnion('contractType', [
-    murabahaSchema,
-    mudarabahSchema,
-    musharakahSchema,
-    wakalahSchema
-]);
+}).refine((data) => { // Conditional validation for Murabaha
+    if (data.contractType === 'murabaha') {
+        return (
+            !!data.goods && data.goods.length >= 2 &&
+            !!data.units && data.units > 0 &&
+            !!data.purchasePrice && data.purchasePrice > 0 &&
+            !!data.sellingPrice && data.sellingPrice > data.purchasePrice
+        );
+    }
+    return true;
+}, {
+    message: 'بيانات المرابحة غير كاملة أو غير صحيحة. سعر البيع يجب أن يكون أعلى من سعر الشراء.',
+    path: ['sellingPrice'], // This is a general path, specific errors would be better if needed.
+})
+.refine(data => { // Conditional validation for Mudarabah
+    if (data.contractType === 'mudarabah') {
+        return (
+            !!data.capital && data.capital > 0 &&
+            !!data.profitSharingRatio && data.profitSharingRatio >= 1 && data.profitSharingRatio <= 99 &&
+            !!data.investmentArea && data.investmentArea.length >= 3
+        );
+    }
+    return true;
+}, { message: "بيانات المضاربة غير كاملة أو غير صحيحة.", path: ["investmentArea"]})
+.refine(data => { // Conditional validation for Musharakah
+    if (data.contractType === 'musharakah') {
+        return (
+            !!data.amount && data.amount > 0 &&
+            !!data.profitDistribution && data.profitDistribution.length >= 3
+        );
+    }
+    return true;
+}, { message: "بيانات المشاركة غير كاملة أو غير صحيحة.", path: ["profitDistribution"]})
+.refine(data => { // Conditional validation for Wakalah
+    if (data.contractType === 'wakalah') {
+        return (
+            !!data.agentName && data.agentName.length >= 3 &&
+            !!data.amount && data.amount > 0 &&
+            !!data.agencyType && data.agencyType.length >= 3
+        );
+    }
+    return true;
+}, { message: "بيانات الوكالة غير كاملة أو غير صحيحة.", path: ["agencyType"]});
 
 
 type FormValues = z.infer<typeof formSchema>;
@@ -150,7 +178,7 @@ export function AddTransactionDialog() {
                 units: data.units,
                 purchasePrice: data.purchasePrice,
                 sellingPrice: data.sellingPrice,
-                amount: data.sellingPrice * data.units,
+                amount: (data.sellingPrice || 0) * (data.units || 0),
                 paymentMethod: 'أقساط شهرية',
             };
             break;
@@ -160,7 +188,7 @@ export function AddTransactionDialog() {
                 ...contractData,
                 type: 'mudarabah',
                 capital: data.capital,
-                profitSharingRatio: { investor: 100 - data.profitSharingRatio, manager: data.profitSharingRatio },
+                profitSharingRatio: { investor: 100 - (data.profitSharingRatio || 50), manager: data.profitSharingRatio || 50 },
                 investmentArea: data.investmentArea,
                 amount: data.capital,
             };
@@ -223,7 +251,7 @@ export function AddTransactionDialog() {
     }
   };
   
-    const { units, purchasePrice, sellingPrice } = form.watch() as { units?: number; purchasePrice?: number; sellingPrice?: number };
+    const { units, purchasePrice, sellingPrice } = form.watch();
 
     const totalProfit =
     units && purchasePrice && sellingPrice && units > 0 && purchasePrice > 0 && sellingPrice > 0
