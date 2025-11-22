@@ -1,3 +1,4 @@
+
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
@@ -11,26 +12,38 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useUser();
 
   useEffect(() => {
-    if (loading) return; // Wait for user status to be determined
+    // Don't do anything until loading is false
+    if (loading) return;
 
     const isAuthPage = pathname === '/login';
 
+    // If no user and not on an auth page, redirect to login
     if (!user && !isAuthPage) {
-      // If user is not logged in and not on the login page, redirect to login
       router.push('/login');
+    }
+
+    // If user is logged in and tries to access login page, redirect to home
+    if (user && isAuthPage) {
+      router.push('/');
     }
   }, [user, loading, pathname, router]);
 
-  // Don't render the main layout on the login page or while loading
-  if (pathname === '/login' || loading) {
+  // While loading authentication state, show nothing to prevent premature rendering of children
+  if (loading) {
+    return null; 
+  }
+  
+  // If we are on the login page, just render the children (the login page itself)
+  if (pathname === '/login') {
     return <>{children}</>;
   }
   
-  // While redirecting, show a blank page or a loader
+  // If not loading and no user, we are in the process of redirecting, so show nothing.
   if (!user) {
     return null;
   }
 
+  // If we have a user and are not on the login page, render the full app layout
   return (
     <>
       <Header />
