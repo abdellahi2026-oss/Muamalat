@@ -22,13 +22,11 @@ import {
 } from '@/components/ui/form';
 import {
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
   type AuthError,
 } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { useAuth, useFirestore } from '@/firebase';
-import { collection, getDocs, query, where } from 'firebase/firestore';
 
 const formSchema = z.object({
   username: z.string().min(3, { message: 'يجب أن يكون اسم المستخدم 3 أحرف على الأقل.' }),
@@ -61,37 +59,7 @@ export default function LoginPage() {
         return;
       }
 
-      let email: string;
-      const isAdmin = data.username.toLowerCase() === 'admin';
-
-      if (isAdmin) {
-        email = 'admin@muamalat.app';
-      } else {
-        const usersRef = collection(firestore, 'clients');
-        const q = query(usersRef, where('username', '==', data.username));
-        const querySnapshot = await getDocs(q);
-
-        if (querySnapshot.empty) {
-          toast({
-            variant: 'destructive',
-            title: 'فشل تسجيل الدخول',
-            description: 'اسم المستخدم أو كلمة المرور غير صحيحة.',
-          });
-          return;
-        }
-        
-        const userDoc = querySnapshot.docs[0];
-        email = userDoc.data().email;
-
-        if (!email) {
-          toast({
-            variant: 'destructive',
-            title: 'فشل تسجيل الدخول',
-            description: 'لم يتم العثور على بريد إلكتروني مرتبط باسم المستخدم هذا.',
-          });
-          return;
-        }
-      }
+      const email = 'admin@muamalat.app';
 
       await signInWithEmailAndPassword(auth, email, data.password);
       
@@ -104,30 +72,7 @@ export default function LoginPage() {
     } catch (error) {
       const firebaseError = error as AuthError;
       
-      // Handle admin account creation if it doesn't exist
-      if (data.username.toLowerCase() === 'admin' && firebaseError.code === 'auth/user-not-found') {
-        try {
-          const email = 'admin@muamalat.app';
-          await createUserWithEmailAndPassword(auth, email, data.password);
-          toast({
-            title: 'تم إنشاء حساب المدير بنجاح!',
-            description: 'تم إنشاء حساب المدير. جارِ تسجيل الدخول...',
-          });
-          // Try signing in again after creation
-          await signInWithEmailAndPassword(auth, email, data.password);
-          router.push('/');
-          return;
-        } catch (creationError) {
-           toast({
-            variant: 'destructive',
-            title: 'فشل في إنشاء حساب المدير',
-            description: 'لم نتمكن من إنشاء حساب المدير. يرجى المحاولة مرة أخرى.',
-          });
-          return;
-        }
-      }
-
-      console.error("Login Error:", error);
+      console.error("Login Error:", firebaseError.code, firebaseError.message);
       let message = 'حدث خطأ غير متوقع.';
 
       if (firebaseError.code) {
