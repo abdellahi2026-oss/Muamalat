@@ -28,9 +28,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Loader2 } from 'lucide-react';
+import { MoreHorizontal, Loader2, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { AddUserDialog } from '@/components/add-user-dialog';
 
 export default function UsersPage() {
   const firestore = useFirestore();
@@ -112,13 +113,16 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="font-headline text-3xl font-bold tracking-tight">
-          إدارة المستخدمين
-        </h1>
-        <p className="text-muted-foreground">
-          عرض وإدارة حسابات المستخدمين في النظام.
-        </p>
+      <div className="flex justify-between items-center">
+        <div className="space-y-1">
+            <h1 className="font-headline text-3xl font-bold tracking-tight">
+            إدارة المستخدمين
+            </h1>
+            <p className="text-muted-foreground">
+            عرض وإدارة حسابات المستخدمين في النظام.
+            </p>
+        </div>
+        <AddUserDialog />
       </div>
       <Card>
         <CardHeader>
@@ -153,7 +157,7 @@ export default function UsersPage() {
                     ) : (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" disabled={u.id === user?.uid}>
+                        <Button variant="ghost" size="icon" disabled={u.email === 'admin@muamalat.app'}>
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
