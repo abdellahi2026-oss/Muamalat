@@ -8,7 +8,7 @@ import {
   FileText,
   CreditCard,
   ChevronDown,
-  Settings,
+  Home,
 } from 'lucide-react';
 import {
   Collapsible,
@@ -40,6 +40,16 @@ export function MainNav() {
     <>
       {/* Mobile Nav */}
       <nav className="mt-8 flex flex-col space-y-2 md:hidden">
+        <Link
+          href="/"
+          className={cn(
+            'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary',
+            pathname === '/' && 'bg-muted text-primary'
+          )}
+        >
+          <Home className="h-4 w-4" />
+          لوحة التحكم
+        </Link>
         <Collapsible open={contractsOpen} onOpenChange={setContractsOpen} className='w-full'>
             <CollapsibleTrigger asChild>
               <button
@@ -96,16 +106,6 @@ export function MainNav() {
           <CreditCard className="h-4 w-4" />
           المعاملات
         </Link>
-         <Link
-            href="/settings"
-            className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary',
-                pathname === '/settings' && 'bg-muted text-primary'
-            )}
-        >
-            <Settings className="h-4 w-4" />
-            الإعدادات
-        </Link>
       </nav>
 
       {/* Desktop Nav */}
@@ -147,15 +147,6 @@ export function MainNav() {
           )}
         >
           المعاملات
-        </Link>
-         <Link
-          href="/settings"
-          className={cn(
-            'transition-colors hover:text-primary-foreground/80',
-            pathname === '/settings' ? 'text-primary-foreground' : 'text-primary-foreground/60'
-          )}
-        >
-          الإعدادات
         </Link>
       </nav>
     </>

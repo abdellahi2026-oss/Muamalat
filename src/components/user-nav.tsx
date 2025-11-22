@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { LogOut, UserCircle } from 'lucide-react';
+import { LogOut, UserCircle, Settings } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import Link from 'next/link';
 import { Skeleton } from './ui/skeleton';
@@ -67,6 +67,15 @@ export function UserNav() {
             </p>
           </div>
         </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+           <DropdownMenuItem asChild>
+                <Link href="/settings">
+                    <Settings className="me-2 h-4 w-4" />
+                    <span>الإعدادات</span>
+                </Link>
+            </DropdownMenuItem>
+        </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout}>
           <LogOut className="me-2 h-4 w-4" />
