@@ -61,6 +61,7 @@ export default function LoginPage() {
     try {
       await signInWithEmailAndPassword(auth, email, data.password);
       // The AppLayout component will handle the redirection after the user state is updated.
+      // No need to router.push here, it creates a race condition.
     } catch (error) {
       const signInError = error as AuthError;
       
