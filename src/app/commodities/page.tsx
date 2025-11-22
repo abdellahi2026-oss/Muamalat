@@ -1,6 +1,6 @@
 
 'use client';
-
+import { useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -17,14 +17,33 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { allContracts } from '@/lib/data';
-import type { AnyContract } from '@/lib/types';
+import type { AnyContract, MurabahaContract, MudarabahContract, MusharakahContract, WakalahContract } from '@/lib/types';
 import { format } from 'date-fns';
+import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase';
+import { collectionGroup, query, where } from 'firebase/firestore';
 
 export default function CurrentTransactionsPage() {
-  const currentTransactions = allContracts.filter(
-    (c) => c.status === 'active' || c.status === 'overdue'
-  );
+  const firestore = useFirestore();
+  const { user } = useUser();
+
+  const contractsQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    // Use a collection group query to get all contracts for the user
+    return query(
+      collectionGroup(firestore, 'murabahaContracts'),
+      where('clientId', '==', user.uid)
+    );
+  }, [firestore, user]);
+
+  const { data: allContracts, isLoading } = useCollection<AnyContract>(contractsQuery);
+
+  const currentTransactions = useMemo(() => {
+    if (!allContracts) return [];
+    return allContracts.filter(
+      (c) => c.status === 'active' || c.status === 'overdue'
+    );
+  }, [allContracts]);
+
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('fr-FR', {
@@ -63,6 +82,21 @@ export default function CurrentTransactionsPage() {
     }
   };
 
+  const getContractAmount = (contract: AnyContract) => {
+    switch (contract.type) {
+      case 'murabaha':
+        return contract.sellingPrice * contract.units;
+      case 'mudarabah':
+        return contract.capital;
+      case 'musharakah':
+        return contract.amount;
+      case 'wakalah':
+        return contract.amount;
+      default:
+        return 0;
+    }
+  }
+
 
   return (
     <div className="space-y-6">
@@ -93,11 +127,13 @@ export default function CurrentTransactionsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {currentTransactions.map((contract) => (
+              {isLoading && <TableRow><TableCell colSpan={5}>جارِ التحميل...</TableCell></TableRow>}
+              {!isLoading && currentTransactions.length === 0 && <TableRow><TableCell colSpan={5}>لا توجد معاملات حالية.</TableCell></TableRow>}
+              {!isLoading && currentTransactions.map((contract) => (
                 <TableRow key={contract.id}>
                   <TableCell>{contract.clientName}</TableCell>
                   <TableCell>{getContractTypeArabic(contract.type)}</TableCell>
-                  <TableCell>{formatCurrency(contract.type === 'murabaha' ? contract.sellingPrice : (contract.type === 'mudarabah' ? contract.capital : contract.amount))}</TableCell>
+                  <TableCell>{formatCurrency(getContractAmount(contract))}</TableCell>
                   <TableCell>{getStatusBadge(contract.status)}</TableCell>
                   <TableCell>
                     {format(new Date(contract.endDate), 'dd/MM/yyyy')}

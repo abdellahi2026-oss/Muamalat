@@ -12,6 +12,7 @@ export type User = {
 
 export type Contract = {
   id: string;
+  clientId: string;
   clientName: string;
   startDate: string;
   endDate: string;
