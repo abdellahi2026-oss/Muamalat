@@ -49,6 +49,9 @@ export default function LoginPage() {
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     try {
+      if (!auth) {
+        throw new Error('Firebase Auth is not initialized');
+      }
       await signInWithEmailAndPassword(auth, data.email, data.password);
       toast({
         title: 'تم تسجيل الدخول بنجاح!',
