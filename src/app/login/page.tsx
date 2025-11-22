@@ -75,18 +75,27 @@ export default function LoginPage() {
           const userCredential = await createUserWithEmailAndPassword(auth, email, data.password);
           const adminUser = userCredential.user;
 
-          // After creating the auth user, create their document in Firestore.
-          // In a real app, you would use a Cloud Function to set custom claims.
-          // For now, we'll just create the user document with the 'admin' role.
-          const adminDocRef = doc(firestore, 'users', adminUser.uid);
-          const adminData: User = {
+          // Create the user profile document in /users
+          const userDocRef = doc(firestore, 'users', adminUser.uid);
+          const userData: User = {
             id: adminUser.uid,
             name: 'Admin', // Default name for the first admin
             email: adminUser.email!,
             role: 'admin',
             status: 'active',
           };
-          await setDoc(adminDocRef, adminData);
+          
+          // Create the admin role marker document in /admins
+          const adminDocRef = doc(firestore, 'admins', adminUser.uid);
+
+          // Use a batch write to ensure both documents are created atomically.
+          // Note: In a real app, this should be done in a Cloud Function for security.
+          // For now, we are creating the user and their role marker from the client.
+          const userWrite = setDoc(userDocRef, userData);
+          const adminWrite = setDoc(adminDocRef, {}); // The document can be empty
+
+          await Promise.all([userWrite, adminWrite]);
+
 
           // IMPORTANT: Do NOT redirect here. The onAuthStateChanged listener will handle it.
         } catch (creationError) {

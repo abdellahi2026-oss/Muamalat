@@ -6,14 +6,16 @@
  *
  * Data Structure:
  * - /users/{userId}: Stores user profile information. Only admins can list/write, but users can read their own profile.
+ * - /admins/{userId}: A separate, locked-down collection to mark which users have admin privileges. This avoids circular rule dependencies.
  * - /clients/{clientId}: Each user has a root client document. All their personal contracts
  *   (Murabaha, Mudarabah, Wakalah) are stored in subcollections under this path.
  * - /musharakahContracts: A top-level collection for shared partnership contracts.
  * - /commodityCards, /agents, /partners: Top-level collections for publicly readable reference data.
  *
  * Key Security Decisions:
+ * - Admin Verification via /admins collection: To check if a user is an admin, we check for the existence of a document in `/admins/{userId}`.
+ *   This is secure and avoids the Firestore anti-pattern of reading from a collection while evaluating rules for that same collection.
  * - Strict Ownership: A user can only access data under their own `/clients/{userId}` path.
- * - Admin-Only User Management: Only users with an `admin` role (verified via a document read) can create, update, or delete documents in the `/users` collection.
  * - Denormalization for Authorization: To ensure fast and secure rules, authorization data is denormalized.
  *   - Musharakah contracts contain a `partnerIds` array, allowing direct access checks without extra database reads.
  *   - Client-specific contracts contain a `clientId` field, ensuring relational integrity with the parent path.
@@ -43,11 +45,12 @@ service cloud.firestore {
     }
     
     /**
-     * Checks if the requesting user has an 'admin' role by reading their user document.
-     * This is used for rules where custom claims are not available or not set.
+     * Checks if the requesting user has an 'admin' role by checking for a corresponding
+     * document in the `/admins` collection. This is the recommended secure way to
+     * manage roles without custom claims in a client-heavy environment.
      */
     function isAdmin() {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
 
@@ -85,7 +88,7 @@ service cloud.firestore {
 
 
     // --------------------------------------------------------------------------------
-    // User Management (Admin Only)
+    // User Management & Admin Role Marker
     // --------------------------------------------------------------------------------
     
     /**
@@ -96,8 +99,18 @@ service cloud.firestore {
      */
     match /users/{userId} {
       allow get: if isOwner(userId) || isAdmin();
-      allow list: if isAdmin();
-      allow create, update, delete: if isAdmin();
+      allow list, create, update, delete: if isAdmin();
+    }
+
+    /**
+     * @description The `admins` collection is a locked-down role-marking system.
+     *              No client can read or write to it. It is only used by security rules (`exists()`).
+     * @path /admins/{adminId}
+     * @deny (all) All client-side operations are forbidden.
+     * @principle This collection acts as a secure, server-side-only set of admin UIDs.
+     */
+    match /admins/{adminId} {
+      allow read, write: if false;
     }
 
 
