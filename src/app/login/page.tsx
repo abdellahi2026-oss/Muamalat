@@ -22,7 +22,6 @@ import {
 } from '@/components/ui/form';
 import {
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
   type AuthError,
 } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -40,7 +39,6 @@ export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
   const auth = useAuth();
-  const firestore = useFirestore();
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -51,7 +49,7 @@ export default function LoginPage() {
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     try {
-      if (!auth || !firestore) {
+      if (!auth) {
         toast({
           variant: 'destructive',
           title: 'فشل تهيئة Firebase',
@@ -71,26 +69,6 @@ export default function LoginPage() {
         router.push('/');
       } catch (error) {
         const signInError = error as AuthError;
-        
-        if (data.username === 'admin' && (signInError.code === 'auth/user-not-found' || signInError.code === 'auth/invalid-credential')) {
-          try {
-            await createUserWithEmailAndPassword(auth, email, data.password);
-            toast({
-              title: 'تم إنشاء حساب المدير بنجاح!',
-              description: 'تم تسجيل دخولك الآن.',
-            });
-            router.push('/');
-            return;
-          } catch (creationError) {
-            const createError = creationError as AuthError;
-            toast({
-              variant: 'destructive',
-              title: 'فشل إنشاء حساب المدير',
-              description: createError.message,
-            });
-            return;
-          }
-        }
         
         let message = 'حدث خطأ غير متوقع.';
         if (signInError.code) {
