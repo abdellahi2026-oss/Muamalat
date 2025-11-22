@@ -77,9 +77,9 @@ export function AddTransactionDialog() {
     defaultValues: {
       clientName: '',
       goods: '',
-      units: undefined,
-      purchasePrice: undefined,
-      sellingPrice: undefined,
+      units: '' as any,
+      purchasePrice: '' as any,
+      sellingPrice: '' as any,
       startDate: undefined,
       endDate: undefined,
     },
@@ -88,7 +88,7 @@ export function AddTransactionDialog() {
   const purchasePrice = form.watch('purchasePrice');
   const sellingPrice = form.watch('sellingPrice');
   const profit =
-    purchasePrice && sellingPrice ? sellingPrice - purchasePrice : 0;
+    purchasePrice > 0 && sellingPrice > 0 ? sellingPrice - purchasePrice : 0;
 
   const onSubmit = async (data: FormValues) => {
     if (!firestore || !user) {
@@ -102,17 +102,21 @@ export function AddTransactionDialog() {
 
     try {
       const contractData = {
-        ...data,
+        clientName: data.clientName,
+        goods: data.goods,
+        units: data.units,
+        purchasePrice: data.purchasePrice,
+        sellingPrice: data.sellingPrice,
         clientId: user.uid,
         type: 'murabaha',
         status: 'active',
-        paymentMethod: 'أقساط شهرية', // Or make this a form field
+        paymentMethod: 'أقساط شهرية',
         startDate: data.startDate.toISOString(),
         endDate: data.endDate.toISOString(),
       };
-
-      await addDoc(
-        collection(firestore, `clients/${user.uid}/murabahaContracts`),
+      
+      const docRef = await addDoc(
+        collection(firestore, 'clients', user.uid, 'murabahaContracts'),
         contractData
       );
 
@@ -121,8 +125,8 @@ export function AddTransactionDialog() {
         description: `تم إنشاء عقد مرابحة جديد لـ ${data.clientName}.`,
       });
 
-      setOpen(false); // Close the dialog
-      form.reset(); // Reset the form
+      setOpen(false);
+      form.reset();
     } catch (error) {
       console.error('Error adding document: ', error);
       toast({
@@ -227,7 +231,7 @@ export function AddTransactionDialog() {
                 )}
               />
             </div>
-            {purchasePrice && sellingPrice && profit > 0 && (
+            {profit > 0 && (
               <div className="rounded-md border bg-muted p-3 text-sm">
                 <span className="text-muted-foreground">الربح: </span>
                 <span className="font-semibold">{formatCurrency(profit)}</span>
@@ -333,5 +337,3 @@ export function AddTransactionDialog() {
     </Dialog>
   );
 }
-
-    
