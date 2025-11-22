@@ -77,7 +77,6 @@ export default function LoginPage() {
             description: 'إذا كان الحساب موجودًا، فسيتم إرسال بريد إلكتروني لإعادة تعيين كلمة المرور.',
         });
     } catch (error) {
-        const resetError = error as AuthError;
         // Show a generic message to avoid confirming if an email exists or not
         toast({
             title: 'تم إرسال بريد إعادة التعيين',
@@ -106,10 +105,13 @@ export default function LoginPage() {
         const signInError = error as AuthError;
         
         if (signInError.code === 'auth/user-not-found') {
-            // User does not exist, let's create it as a new merchant.
+            // User does not exist, let's create it.
             try {
                 const userCredential = await createUserWithEmailAndPassword(auth, email, data.password);
                 const newUser = userCredential.user;
+
+                // Determine the role based on the email
+                const role = email.toLowerCase() === 'admin@muamalat.app' ? 'admin' : 'merchant';
                 
                 // Create user profile document in /users collection
                 const userDocRef = doc(firestore, 'users', newUser.uid);
@@ -117,15 +119,14 @@ export default function LoginPage() {
                     id: newUser.uid,
                     name: data.username, // Use username as initial name
                     email: newUser.email!,
-                    role: 'merchant', // All new users are merchants
+                    role: role,
                     status: 'active',
                 };
                 await setDoc(userDocRef, userData);
                 
-                // Auth state change will handle the redirect after creation.
                 toast({
                   title: 'تم إنشاء الحساب بنجاح!',
-                  description: 'مرحباً بك في مدير المعاملات.',
+                  description: `مرحباً بك في مدير المعاملات. دورك هو: ${role}.`,
                 });
 
             } catch (creationError) {
@@ -144,8 +145,8 @@ export default function LoginPage() {
         switch (signInError.code) {
             case 'auth/wrong-password':
             case 'auth/invalid-credential':
-            message = 'كلمة المرور التي أدخلتها غير صحيحة.';
-            break;
+              message = 'كلمة المرور التي أدخلتها غير صحيحة.';
+              break;
             case 'auth/too-many-requests':
             message = 'تم حظر الوصول مؤقتًا بسبب كثرة محاولات تسجيل الدخول الفاشلة.';
             break;
@@ -198,7 +199,7 @@ export default function LoginPage() {
                   <FormItem>
                     <div className="flex items-center justify-between">
                       <FormLabel>كلمة المرور</FormLabel>
-                      <button
+                       <button
                         type="button"
                         onClick={handlePasswordReset}
                         className="inline-block text-sm underline"

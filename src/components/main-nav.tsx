@@ -8,7 +8,7 @@ import {
   FileText,
   CreditCard,
   ChevronDown,
-  Home,
+  Users,
 } from 'lucide-react';
 import {
   Collapsible,
@@ -23,9 +23,21 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from './ui/button';
+import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import type { User } from '@/lib/types';
+
 
 export function MainNav() {
   const pathname = usePathname();
+  const { user, firestore } = useFirebase();
+
+  const userDocRef = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [user, firestore]);
+  
+  const { data: userData } = useDoc<User>(userDocRef);
   
   const isContractsActive = (path: string) => pathname.startsWith(path);
   
@@ -35,21 +47,13 @@ export function MainNav() {
   
   const isContractsActiveMobile = (type: string) => pathname === `/contracts/${type}`;
 
+  const isAdmin = userData?.role === 'admin';
+
 
   return (
     <>
       {/* Mobile Nav */}
       <nav className="mt-8 flex flex-col space-y-2 md:hidden">
-        <Link
-          href="/"
-          className={cn(
-            'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary',
-            pathname === '/' && 'bg-muted text-primary'
-          )}
-        >
-          <Home className="h-4 w-4" />
-          لوحة التحكم
-        </Link>
         <Collapsible open={contractsOpen} onOpenChange={setContractsOpen} className='w-full'>
             <CollapsibleTrigger asChild>
               <button
@@ -106,6 +110,18 @@ export function MainNav() {
           <CreditCard className="h-4 w-4" />
           المعاملات
         </Link>
+        {isAdmin && (
+            <Link
+            href="/users"
+            className={cn(
+                'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary',
+                pathname === '/users' && 'bg-muted text-primary'
+            )}
+            >
+            <Users className="h-4 w-4" />
+            المستخدمون
+            </Link>
+        )}
       </nav>
 
       {/* Desktop Nav */}
@@ -148,6 +164,17 @@ export function MainNav() {
         >
           المعاملات
         </Link>
+        {isAdmin && (
+          <Link
+            href="/users"
+            className={cn(
+              'transition-colors hover:text-primary-foreground/80',
+              pathname === '/users' ? 'text-primary-foreground' : 'text-primary-foreground/60'
+            )}
+          >
+            المستخدمون
+          </Link>
+        )}
       </nav>
     </>
   );

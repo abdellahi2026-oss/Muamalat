@@ -21,20 +21,29 @@ service cloud.firestore {
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
+    
+    /**
+     * Checks if the user has the 'admin' role.
+     * It reads the user's role from their profile document in /users.
+     */
+    function isAdmin() {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
 
     // --------------------------------------------------------------------------------
     // User Profile Management
     // --------------------------------------------------------------------------------
     
     /**
-     * @description A user can read or create their own profile. They cannot see other profiles, list all users, or delete profiles.
+     * @description Users can manage their own profiles. Admins can manage any user profile.
      * @path /users/{userId}
      */
     match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
-      allow list, delete: if false;
+      allow get: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId); // A user can create their own profile.
+      allow update: if isOwner(userId) || isAdmin(); // A user can update their own profile, or an admin can.
+      allow list: if isAdmin(); // Only admins can list all users.
+      allow delete: if false; // Disallow deletion of user profiles for data integrity.
     }
 
     // --------------------------------------------------------------------------------
@@ -52,7 +61,7 @@ service cloud.firestore {
         allow read: if isOwner(clientId);
 
         // Write Rule: Allow writing if the user is the owner AND the data being written has the correct clientId.
-        // This prevents a user from creating a contract under jejich own ID but with another user's clientId field.
+        // This prevents a user from creating a contract under their own ID but with another user's clientId field.
         allow write: if isOwner(clientId) && request.resource.data.clientId == clientId;
     }
 
