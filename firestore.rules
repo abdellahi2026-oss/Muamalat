@@ -27,12 +27,8 @@ service cloud.firestore {
     // --------------------------------------------------------------------------------
     
     /**
-     * @description Users can create and read their own profile. They cannot see other profiles or list all users.
+     * @description A user can read or create their own profile. They cannot see other profiles, list all users, or delete profiles.
      * @path /users/{userId}
-     * @allow get - A user can read their OWN profile document.
-     * @allow create - A user can create their own profile document.
-     * @allow update - A user can update their own profile document.
-     * @deny list, delete - Listing or deleting profiles is not allowed for clients.
      */
     match /users/{userId} {
       allow get: if isOwner(userId);
@@ -48,12 +44,16 @@ service cloud.firestore {
     /**
      * @description Secures all user-owned contracts (Murabaha, Mudarabah, Wakalah, Musharakah) in their respective subcollections.
      * @path /clients/{clientId}/{contractCollection}/{contractId}
-     * @allow (read, write) The client creating/managing a contract in their own subcollection.
-     * @deny (any) A user trying to access contracts under another client's path.
      * @principle Enforces strict data ownership for all documents within a user's data tree.
+     * A user can only read/write to their own subcollections.
      */
     match /clients/{clientId}/{contractCollection}/{contractId} {
-      allow read, list, write: if isOwner(clientId) && request.resource.data.clientId == clientId;
+        // Read Rule: Allow reading if the user is the owner of the client document.
+        allow read: if isOwner(clientId);
+
+        // Write Rule: Allow writing if the user is the owner AND the data being written has the correct clientId.
+        // This prevents a user from creating a contract under jejich own ID but with another user's clientId field.
+        allow write: if isOwner(clientId) && request.resource.data.clientId == clientId;
     }
 
     // --------------------------------------------------------------------------------
