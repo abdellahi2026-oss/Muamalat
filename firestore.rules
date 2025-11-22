@@ -1,23 +1,23 @@
+
 /**
  * Core Philosophy: This ruleset enforces a user-centric security model for managing Islamic finance contracts.
  * Client-specific data and contracts are strictly isolated, accessible only by the owning client. Shared contracts
- * (Musharakah) are accessible only by the participating partners.
+ * (Musharakah) are accessible only by the participating partners. Admin users have elevated privileges for user management.
  *
  * Data Structure:
+ * - /users/{userId}: Stores user profile information. Only admins can list/write, but users can read their own profile.
  * - /clients/{clientId}: Each user has a root client document. All their personal contracts
  *   (Murabaha, Mudarabah, Wakalah) are stored in subcollections under this path.
  * - /musharakahContracts: A top-level collection for shared partnership contracts.
  * - /commodityCards, /agents, /partners: Top-level collections for publicly readable reference data.
  *
  * Key Security Decisions:
- * - Strict Ownership: A user can only access data under their own `/clients/{userId}` path. Listing all clients is disabled.
+ * - Strict Ownership: A user can only access data under their own `/clients/{userId}` path.
+ * - Admin-Only User Management: Only users with an `admin` role (verified via a custom claim or a document read) can create, update, or delete documents in the `/users` collection.
  * - Denormalization for Authorization: To ensure fast and secure rules, authorization data is denormalized.
  *   - Musharakah contracts contain a `partnerIds` array, allowing direct access checks without extra database reads.
  *   - Client-specific contracts contain a `clientId` field, ensuring relational integrity with the parent path.
- * - Structural Segregation: Different contract types are stored in separate collections. This simplifies rules
- *   and ensures performant, secure queries, as each collection has a uniform security posture.
- * - Public Data: Reference data like commodity cards, agents, and partners is publicly readable but locked down from client modification.
- *   Writes to this data should be handled by a trusted server environment or admin SDK.
+ * - Public Data: Reference data is publicly readable but locked down from client modification.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -41,6 +41,15 @@ service cloud.firestore {
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
+    
+    /**
+     * Checks if the requesting user has an 'admin' role.
+     * It fetches the user's profile from the /users collection to check their role.
+     */
+    function isAdmin() {
+        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
 
     /**
      * Checks if a document exists before an update or delete operation.
@@ -76,7 +85,23 @@ service cloud.firestore {
 
 
     // --------------------------------------------------------------------------------
-    // Client & User-Owned Data
+    // User Management (Admin Only)
+    // --------------------------------------------------------------------------------
+    
+    /**
+     * @description Admins can manage all user profiles. Users can only read their own profile.
+     * @path /users/{userId}
+     * @allow (get) A user reading their own profile, or any admin reading any profile.
+     * @allow (list, create, update, delete) Only users with the 'admin' role.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list, create, update, delete: if isAdmin();
+    }
+
+
+    // --------------------------------------------------------------------------------
+    // Client & User-Owned Data (Legacy - to be phased out)
     // --------------------------------------------------------------------------------
 
     /**
@@ -147,8 +172,7 @@ service cloud.firestore {
      */
     match /commodityCards/{commodityCardId} {
       allow get, list: if true;
-      // CRITICAL: Cannot implement owner-only writes. The 'CommodityCard' entity is missing an 'ownerId' or 'creatorId' field.
-      allow create, update, delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow create, update, delete: if false; 
     }
 
     /**
@@ -160,8 +184,7 @@ service cloud.firestore {
      */
     match /agents/{agentId} {
       allow get, list: if true;
-      // CRITICAL: Cannot implement owner-only writes. The 'Agent' entity is missing an 'ownerId' or 'creatorId' field.
-      allow create, update, delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow create, update, delete: if false;
     }
 
     /**
@@ -173,8 +196,7 @@ service cloud.firestore {
      */
     match /partners/{partnerId} {
       allow get, list: if true;
-      // CRITICAL: Cannot implement owner-only writes. The 'Partner' entity is missing an 'ownerId' or 'creatorId' field.
-      allow create, update, delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow create, update, delete: if false;
     }
   }
 }

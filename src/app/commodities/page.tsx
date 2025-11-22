@@ -21,10 +21,13 @@ import type { AnyContract, MurabahaContract, MudarabahContract, MusharakahContra
 import { format } from 'date-fns';
 import { useCollection, useFirestore, useMemoFirebase, useFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
+import { useSearchParams } from 'next/navigation';
 
 export default function CurrentTransactionsPage() {
   const firestore = useFirestore();
   const { user } = useFirebase();
+  const searchParams = useSearchParams();
+  const searchQuery = searchParams.get('q');
 
   const murabahaQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
@@ -63,12 +66,17 @@ export default function CurrentTransactionsPage() {
   const isLoading = loadingMurabaha || loadingMudarabah || loadingMusharakah || loadingWakalah;
 
 
-  const currentTransactions = useMemo(() => {
+  const filteredContracts = useMemo(() => {
     if (!allContracts) return [];
-    return allContracts.filter(
-      (c) => c.status === 'active' || c.status === 'overdue'
+    if (!searchQuery) return allContracts;
+
+    const lowercasedQuery = searchQuery.toLowerCase();
+    
+    return allContracts.filter(contract => 
+      contract.clientName?.toLowerCase().includes(lowercasedQuery) ||
+      getContractTypeArabic(contract.type).toLowerCase().includes(lowercasedQuery)
     );
-  }, [allContracts]);
+  }, [allContracts, searchQuery]);
 
 
   const formatCurrency = (amount: number) => {
@@ -76,6 +84,21 @@ export default function CurrentTransactionsPage() {
       style: 'currency',
       currency: 'MRU',
     }).format(amount);
+  };
+  
+    const getContractTypeArabic = (type: AnyContract['type']) => {
+    switch (type) {
+      case 'murabaha':
+        return 'مرابحة';
+      case 'mudarabah':
+        return 'مضاربة';
+      case 'musharakah':
+        return 'مشاركة';
+      case 'wakalah':
+        return 'وكالة';
+      default:
+        return 'عقد';
+    }
   };
 
   const getStatusBadge = (status: AnyContract['status']) => {
@@ -92,19 +115,8 @@ export default function CurrentTransactionsPage() {
         );
       case 'archived':
         return <Badge variant="outline">مؤرشف</Badge>;
-    }
-  };
-  
-    const getContractTypeArabic = (type: AnyContract['type']) => {
-    switch (type) {
-      case 'murabaha':
-        return 'مرابحة';
-      case 'mudarabah':
-        return 'مضاربة';
-      case 'musharakah':
-        return 'مشاركة';
-      case 'wakalah':
-        return 'وكالة';
+      default:
+        return <Badge variant="outline">{status}</Badge>;
     }
   };
 
@@ -112,24 +124,24 @@ export default function CurrentTransactionsPage() {
     <div className="space-y-6">
       <div className="space-y-1">
         <h1 className="font-headline text-3xl font-bold tracking-tight">
-          المعاملات الحالية
+          المعاملات
         </h1>
         <p className="text-muted-foreground">
-          عرض جميع المعاملات النشطة والمتأخرة.
+          عرض جميع معاملاتك الحالية والسابقة.
         </p>
       </div>
       <Card>
         <CardHeader>
           <CardTitle>قائمة المعاملات</CardTitle>
           <CardDescription>
-            جميع المعاملات التي تتطلب متابعة.
+            {searchQuery ? `نتائج البحث عن "${searchQuery}"` : 'جميع المعاملات التي قمت بها.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>العميل</TableHead>
+                <TableHead>العميل / المشروع</TableHead>
                 <TableHead>نوع العقد</TableHead>
                 <TableHead>المبلغ</TableHead>
                 <TableHead>الحالة</TableHead>
@@ -137,16 +149,22 @@ export default function CurrentTransactionsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading && <TableRow><TableCell colSpan={5}>جارِ التحميل...</TableCell></TableRow>}
-              {!isLoading && currentTransactions.length === 0 && <TableRow><TableCell colSpan={5}>لا توجد معاملات حالية.</TableCell></TableRow>}
-              {!isLoading && currentTransactions.map((contract) => (
+              {isLoading && <TableRow><TableCell colSpan={5} className="text-center">جارِ التحميل...</TableCell></TableRow>}
+              {!isLoading && filteredContracts.length === 0 && (
+                <TableRow>
+                    <TableCell colSpan={5} className="text-center">
+                        {searchQuery ? 'لم يتم العثور على نتائج.' : 'لا توجد معاملات لعرضها.'}
+                    </TableCell>
+                </TableRow>
+              )}
+              {!isLoading && filteredContracts.map((contract) => (
                 <TableRow key={contract.id}>
                   <TableCell>{contract.clientName}</TableCell>
                   <TableCell>{getContractTypeArabic(contract.type)}</TableCell>
-                  <TableCell>{formatCurrency(contract.amount)}</TableCell>
+                  <TableCell>{contract.amount ? formatCurrency(contract.amount) : 'N/A'}</TableCell>
                   <TableCell>{getStatusBadge(contract.status)}</TableCell>
                   <TableCell>
-                    {format(new Date(contract.endDate), 'dd/MM/yyyy')}
+                    {contract.endDate ? format(new Date(contract.endDate), 'dd/MM/yyyy') : 'N/A'}
                   </TableCell>
                 </TableRow>
               ))}
@@ -157,3 +175,5 @@ export default function CurrentTransactionsPage() {
     </div>
   );
 }
+
+    

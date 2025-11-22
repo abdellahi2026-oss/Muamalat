@@ -41,8 +41,7 @@ export type MudarabahContract = Contract & {
 
 export type MusharakahContract = Contract & {
   type: 'musharakah';
-  partnerContributions: { partner: string; amount: number }[];
-  ownershipPercentages: { partner: string; percentage: number }[];
+  partnerIds: string[];
   profitDistribution: string;
 };
 

@@ -1,12 +1,14 @@
 
-import { AnyContract, CommodityCard, User } from './types';
 
-export const allUsers: User[] = [
-  { id: 'usr_001', name: 'أحمد محمود', email: 'ahmed.mahmoud@example.com', role: 'admin', status: 'active' },
-  { id: 'usr_002', name: 'فاطمة علي', email: 'fatima.ali@example.com', role: 'merchant', status: 'active' },
-  { id: 'usr_003', name: 'خالد حسين', email: 'khaled.hussain@example.com', role: 'merchant', status: 'inactive' },
-  { id: 'usr_004', name: 'مريم يوسف', email: 'mariam.youssef@example.com', role: 'merchant', status: 'active' },
-];
+import { CommodityCard } from './types';
+
+// This data is now fetched from Firestore, so this static array is no longer needed.
+// export const allUsers: User[] = [
+//   { id: 'usr_001', name: 'أحمد محمود', email: 'ahmed.mahmoud@example.com', role: 'admin', status: 'active' },
+//   { id: 'usr_002', name: 'فاطمة علي', email: 'fatima.ali@example.com', role: 'merchant', status: 'active' },
+//   { id: 'usr_003', name: 'خالد حسين', email: 'khaled.hussain@example.com', role: 'merchant', status: 'inactive' },
+//   { id: 'usr_004', name: 'مريم يوسف', email: 'mariam.youssef@example.com', role: 'merchant', status: 'active' },
+// ];
 
 export const commodityCards: CommodityCard[] = [
     {

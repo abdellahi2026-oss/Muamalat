@@ -1,5 +1,44 @@
+
 {
   "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user profile in the system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user, matching Firebase Auth UID."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the user."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Email address of the user."
+        },
+        "role": {
+          "type": "string",
+          "description": "The role of the user.",
+          "enum": ["admin", "merchant"]
+        },
+        "status": {
+          "type": "string",
+          "description": "The status of the user account.",
+          "enum": ["active", "inactive"]
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "email",
+        "role",
+        "status"
+      ]
+    },
     "MurabahaContract": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "MurabahaContract",
@@ -12,7 +51,7 @@
         },
         "clientId": {
           "type": "string",
-          "description": "Reference to the Client associated with this contract. (Relationship: Client 1:N MurabahaContract)"
+          "description": "Reference to the Client associated with this contract."
         },
         "goodsDescription": {
           "type": "string",
@@ -256,31 +295,6 @@
         "status"
       ]
     },
-    "Client": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Client",
-      "type": "object",
-      "description": "Represents a client.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the client."
-        },
-        "name": {
-          "type": "string",
-          "description": "Name of the client."
-        },
-        "contactInformation": {
-          "type": "string",
-          "description": "Contact information of the client."
-        }
-      },
-      "required": [
-        "id",
-        "name",
-        "contactInformation"
-      ]
-    },
     "Agent": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Agent",
@@ -341,17 +355,17 @@
   "firestore": {
     "structure": [
       {
-        "path": "/clients/{clientId}",
+        "path": "/users/{userId}",
         "definition": {
-          "entityName": "Client",
+          "entityName": "User",
           "schema": {
-            "$ref": "#/backend/entities/Client"
+            "$ref": "#/backend/entities/User"
           },
-          "description": "Stores client information.  Client ID is used as the document ID.",
+          "description": "Stores user profile information. User's auth UID is used as the document ID.",
           "params": [
             {
-              "name": "clientId",
-              "description": "The unique identifier for the client."
+              "name": "userId",
+              "description": "The unique identifier for the user."
             }
           ]
         }
