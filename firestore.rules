@@ -95,11 +95,13 @@ service cloud.firestore {
      * @description Admins can manage all user profiles. Users can only read their own profile.
      * @path /users/{userId}
      * @allow (get) A user reading their own profile, or any admin reading any profile.
-     * @allow (list, create, update, delete) Only users with the 'admin' role.
+     * @allow (list) Only users with the 'admin' role.
+     * @allow (create, update, delete) Only users with the 'admin' role.
      */
     match /users/{userId} {
       allow get: if isOwner(userId) || isAdmin();
-      allow list, create, update, delete: if isAdmin();
+      allow list: if isAdmin();
+      allow create, update, delete: if isAdmin();
     }
 
     /**
