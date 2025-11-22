@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { CreditCard, LogOut, Settings, User as UserIcon } from 'lucide-react';
+import { CreditCard, LogOut, Settings, UserCircle } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import Link from 'next/link';
 import { Skeleton } from './ui/skeleton';
@@ -48,7 +48,7 @@ export function UserNav() {
         <Button variant="ghost" className="relative h-10 w-10 rounded-full">
           <Avatar className="h-10 w-10">
             <AvatarFallback className="bg-primary text-primary-foreground">
-              <UserIcon className="h-5 w-5" />
+              <UserCircle className="h-8 w-8" />
             </AvatarFallback>
           </Avatar>
         </Button>
@@ -66,7 +66,7 @@ export function UserNav() {
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
             <Link href="/settings">
-                <UserIcon className="me-2 h-4 w-4" />
+                <UserCircle className="me-2 h-4 w-4" />
                 <span>الملف الشخصي</span>
             </Link>
           </DropdownMenuItem>
