@@ -71,12 +71,6 @@ export function UserNav() {
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
             <Link href="/settings">
-                <UserCircle className="me-2 h-4 w-4" />
-                <span>الملف الشخصي</span>
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href="/settings">
                 <Settings className="me-2 h-4 w-4" />
                 <span>الإعدادات</span>
             </Link>
@@ -91,5 +85,3 @@ export function UserNav() {
     </DropdownMenu>
   );
 }
-
-    
