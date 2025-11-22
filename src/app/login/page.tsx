@@ -51,12 +51,13 @@ export default function LoginPage() {
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     try {
-      if (!auth || !firestore) {
+      if (!auth || !firestore || !auth.app.options.apiKey) {
         toast({
           variant: 'destructive',
           title: 'فشل تسجيل الدخول',
-          description: 'لم يتم تهيئة Firebase بشكل صحيح.',
+          description: 'فشل تهيئة Firebase. يرجى التحقق من إعدادات المشروع.',
         });
+        console.error("Firebase not initialized correctly.");
         return;
       }
 
@@ -116,6 +117,9 @@ export default function LoginPage() {
           case 'auth/too-many-requests':
             message = 'تم حظر الوصول مؤقتًا بسبب كثرة محاولات تسجيل الدخول الفاشلة.';
             break;
+          case 'auth/configuration-not-found':
+             message = 'فشل تهيئة Firebase. يرجى مراجعة إعدادات المشروع والتأكد من تفعيل المصادقة.';
+             break;
           default:
             message = `حدث خطأ: ${firebaseError.message}`;
             break;
