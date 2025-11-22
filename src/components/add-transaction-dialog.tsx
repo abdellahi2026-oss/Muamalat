@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -41,55 +41,58 @@ import {
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, setDoc } from 'firebase/firestore';
 import { useFirebase, useFirestore } from '@/firebase';
 
-// Function to create the dynamic schema based on the contract type
 const getFormSchema = (contractType: string) => {
     const baseSchema = z.object({
+        contractType: z.enum(['murabaha', 'mudarabah', 'musharakah', 'wakalah']),
         clientName: z.string().min(3, { message: 'يجب أن يكون اسم العميل 3 أحرف على الأقل.' }),
         startDate: z.date({ required_error: 'يجب إدخال تاريخ البدء.' }),
         endDate: z.date({ required_error: 'يجب إدخال تاريخ الانتهاء.' }),
     });
 
-    switch (contractType) {
-        case 'murabaha':
-            return baseSchema.extend({
-                contractType: z.literal('murabaha'),
-                goods: z.string().min(2, { message: 'يجب إدخال وصف للسلعة.' }),
-                units: z.coerce.number().positive({ message: 'يجب أن تكون الكمية رقمًا موجبًا.' }),
-                purchasePrice: z.coerce.number().positive({ message: 'يجب أن يكون سعر الشراء رقمًا موجبًا.' }),
-                sellingPrice: z.coerce.number().positive({ message: 'يجب أن يكون سعر البيع رقمًا موجبًا.' }),
-            }).refine((data) => data.sellingPrice > data.purchasePrice, {
-                message: 'سعر البيع يجب أن يكون أكبر من سعر الشراء.',
-                path: ['sellingPrice'],
-            });
-        case 'mudarabah':
-            return baseSchema.extend({
-                contractType: z.literal('mudarabah'),
-                capital: z.coerce.number().positive({ message: 'يجب أن يكون رأس المال رقمًا موجبًا.' }),
-                profitSharingRatio: z.coerce.number().min(1).max(99, { message: 'يجب أن تكون النسبة بين 1 و 99.' }),
-                investmentArea: z.string().min(3, { message: 'يجب إدخال مجال الاستثمار.' }),
-            });
-        case 'musharakah':
-            return baseSchema.extend({
-                contractType: z.literal('musharakah'),
-                amount: z.coerce.number().positive({ message: 'يجب أن يكون إجمالي المساهمة رقمًا موجبًا.' }),
-                profitDistribution: z.string().min(3, { message: 'يجب توضيح كيفية توزيع الأرباح.' }),
-            });
-        case 'wakalah':
-            return baseSchema.extend({
-                contractType: z.literal('wakalah'),
-                agentName: z.string().min(3, { message: 'يجب أن يكون اسم الوكيل 3 أحرف على الأقل.' }),
-                amount: z.coerce.number().positive({ message: 'يجب أن تكون رسوم الوكالة رقمًا موجبًا.' }),
-                agencyType: z.string().min(3, { message: 'يجب إدخال نوع الوكالة.' }),
-            });
-        default:
-            return baseSchema.extend({
-                contractType: z.enum(['murabaha', 'mudarabah', 'musharakah', 'wakalah']),
-            });
-    }
+    const murabahaSchema = baseSchema.extend({
+        contractType: z.literal('murabaha'),
+        goods: z.string().min(2, { message: 'يجب إدخال وصف للسلعة.' }),
+        units: z.coerce.number().positive({ message: 'يجب أن تكون الكمية رقمًا موجبًا.' }),
+        purchasePrice: z.coerce.number().positive({ message: 'يجب أن يكون سعر الشراء رقمًا موجبًا.' }),
+        sellingPrice: z.coerce.number().positive({ message: 'يجب أن يكون سعر البيع رقمًا موجبًا.' }),
+    }).refine((data) => data.sellingPrice > data.purchasePrice, {
+        message: 'سعر البيع يجب أن يكون أكبر من سعر الشراء.',
+        path: ['sellingPrice'],
+    });
+
+    const mudarabahSchema = baseSchema.extend({
+        contractType: z.literal('mudarabah'),
+        capital: z.coerce.number().positive({ message: 'يجب أن يكون رأس المال رقمًا موجبًا.' }),
+        profitSharingRatio: z.coerce.number().min(1).max(99, { message: 'يجب أن تكون النسبة بين 1 و 99.' }),
+        investmentArea: z.string().min(3, { message: 'يجب إدخال مجال الاستثمار.' }),
+    });
+
+    const musharakahSchema = baseSchema.extend({
+        contractType: z.literal('musharakah'),
+        amount: z.coerce.number().positive({ message: 'يجب أن يكون إجمالي المساهمة رقمًا موجبًا.' }),
+        profitDistribution: z.string().min(3, { message: 'يجب توضيح كيفية توزيع الأرباح.' }),
+    });
+
+    const wakalahSchema = baseSchema.extend({
+        contractType: z.literal('wakalah'),
+        agentName: z.string().min(3, { message: 'يجب أن يكون اسم الوكيل 3 أحرف على الأقل.' }),
+        amount: z.coerce.number().positive({ message: 'يجب أن تكون رسوم الوكالة رقمًا موجبًا.' }),
+        agencyType: z.string().min(3, { message: 'يجب إدخال نوع الوكالة.' }),
+    });
+    
+    return z.discriminatedUnion('contractType', [
+        murabahaSchema,
+        mudarabahSchema,
+        musharakahSchema,
+        wakalahSchema
+    ]);
 };
+
+
+type FormValues = z.infer<ReturnType<typeof getFormSchema>>;
 
 
 export function AddTransactionDialog() {
@@ -99,16 +102,26 @@ export function AddTransactionDialog() {
   const firestore = useFirestore();
   const { user } = useFirebase();
 
-  const currentSchema = useMemo(() => getFormSchema(contractType), [contractType]);
-  type FormValues = z.infer<typeof currentSchema>;
+  const formSchema = getFormSchema(contractType);
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(currentSchema),
+    resolver: zodResolver(formSchema),
     defaultValues: {
       contractType: 'murabaha',
       clientName: '',
       startDate: undefined,
       endDate: undefined,
+      goods: '',
+      units: 0,
+      purchasePrice: 0,
+      sellingPrice: 0,
+      capital: 0,
+      profitSharingRatio: 0,
+      investmentArea: '',
+      amount: 0,
+      profitDistribution: '',
+      agentName: '',
+      agencyType: '',
     },
   });
 
@@ -128,7 +141,7 @@ export function AddTransactionDialog() {
         status: 'active',
         startDate: data.startDate.toISOString(),
         endDate: data.endDate.toISOString(),
-         clientName: data.clientName,
+        clientName: data.clientName,
     };
 
     switch (data.contractType) {
@@ -168,7 +181,8 @@ export function AddTransactionDialog() {
                 type: 'musharakah',
             };
              try {
-                await addDoc(collection(firestore, 'musharakahContracts'), musharakahDocData);
+                const newDocRef = doc(collection(firestore, 'musharakahContracts'));
+                await setDoc(newDocRef, {...musharakahDocData, id: newDocRef.id});
                 toast({ title: 'تمت إضافة المعاملة بنجاح!', description: `تم إنشاء عقد مشاركة جديد لمشروع ${data.clientName}.` });
                 setOpen(false);
                 form.reset();
@@ -193,7 +207,8 @@ export function AddTransactionDialog() {
 
 
     try {
-        await addDoc(collection(firestore, 'clients', user.uid, collectionName), contractData);
+        const newDocRef = doc(collection(firestore, 'clients', user.uid, collectionName));
+        await setDoc(newDocRef, {...contractData, id: newDocRef.id});
 
       toast({
         title: 'تمت إضافة المعاملة بنجاح!',
@@ -228,13 +243,7 @@ export function AddTransactionDialog() {
 
   const handleContractTypeChange = (value: string) => {
     setContractType(value);
-    form.reset({
-        // @ts-ignore
-        contractType: value,
-        clientName: '',
-        startDate: undefined,
-        endDate: undefined,
-    });
+    form.reset({ ...form.getValues(), contractType: value as FormValues['contractType'] });
   };
 
   return (
@@ -258,23 +267,32 @@ export function AddTransactionDialog() {
             className="grid gap-4 py-4"
           >
             
-            <FormItem>
-                <FormLabel>نوع العقد</FormLabel>
-                <Select onValueChange={handleContractTypeChange} value={contractType}>
-                    <FormControl>
-                    <SelectTrigger>
-                        <SelectValue placeholder="اختر نوع العقد" />
-                    </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                        <SelectItem value="murabaha">مرابحة</SelectItem>
-                        <SelectItem value="mudarabah">مضاربة</SelectItem>
-                        <SelectItem value="musharakah">مشاركة</SelectItem>
-                        <SelectItem value="wakalah">وكالة</SelectItem>
-                    </SelectContent>
-                </Select>
-                <FormMessage />
-            </FormItem>
+            <FormField
+                control={form.control}
+                name="contractType"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>نوع العقد</FormLabel>
+                    <Select onValueChange={(value) => {
+                        field.onChange(value);
+                        handleContractTypeChange(value);
+                    }} value={field.value}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="اختر نوع العقد" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            <SelectItem value="murabaha">مرابحة</SelectItem>
+                            <SelectItem value="mudarabah">مضاربة</SelectItem>
+                            <SelectItem value="musharakah">مشاركة</SelectItem>
+                            <SelectItem value="wakalah">وكالة</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
 
 
             <FormField
@@ -544,6 +562,7 @@ export function AddTransactionDialog() {
               />
             </div>
             <DialogFooter>
+               <Button type="button" variant="outline" onClick={() => setOpen(false)}>إلغاء</Button>
               <Button type="submit" disabled={form.formState.isSubmitting}>
                 {form.formState.isSubmitting && (
                   <Loader2 className="me-2 h-4 w-4 animate-spin" />
@@ -559,3 +578,5 @@ export function AddTransactionDialog() {
     </Dialog>
   );
 }
+
+    
