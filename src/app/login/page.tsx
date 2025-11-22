@@ -51,23 +51,20 @@ export default function LoginPage() {
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     try {
-      if (!auth || !firestore || !auth.app.options.apiKey) {
+      if (!auth || !firestore) {
         toast({
           variant: 'destructive',
-          title: 'فشل تسجيل الدخول',
-          description: 'فشل تهيئة Firebase. يرجى التحقق من إعدادات المشروع.',
+          title: 'فشل تهيئة Firebase',
+          description: 'يرجى المحاولة مرة أخرى بعد لحظات.',
         });
-        console.error("Firebase not initialized correctly.");
         return;
       }
 
-      let email;
+      let email: string;
 
-      // Handle admin login directly
-      if (data.username === 'admin') {
+      if (data.username.toLowerCase() === 'admin') {
         email = 'admin@muamalat.app';
       } else {
-        // For other users, find email from Firestore
         const usersRef = collection(firestore, 'users');
         const q = query(usersRef, where('username', '==', data.username));
         const querySnapshot = await getDocs(q);
@@ -80,15 +77,15 @@ export default function LoginPage() {
           });
           return;
         }
-
+        
         const userDoc = querySnapshot.docs[0];
         email = userDoc.data().email;
-        
+
         if (!email) {
-           toast({
+          toast({
             variant: 'destructive',
             title: 'فشل تسجيل الدخول',
-            description: 'لم يتم العثور على بريد إلكتروني لهذا المستخدم.',
+            description: 'لم يتم العثور على بريد إلكتروني مرتبط باسم المستخدم هذا.',
           });
           return;
         }
@@ -117,11 +114,14 @@ export default function LoginPage() {
           case 'auth/too-many-requests':
             message = 'تم حظر الوصول مؤقتًا بسبب كثرة محاولات تسجيل الدخول الفاشلة.';
             break;
-          case 'auth/configuration-not-found':
-             message = 'فشل تهيئة Firebase. يرجى مراجعة إعدادات المشروع والتأكد من تفعيل المصادقة.';
+          case 'auth/network-request-failed':
+            message = 'فشل الاتصال بالشبكة. يرجى التحقق من اتصالك بالإنترنت.';
+            break;
+           case 'auth/configuration-not-found':
+             message = 'فشل العثور على إعدادات Firebase. يرجى التأكد من صحة الإعدادات.';
              break;
           default:
-            message = `حدث خطأ: ${firebaseError.message}`;
+            message = firebaseError.message || 'حدث خطأ غير متوقع.';
             break;
         }
       }
