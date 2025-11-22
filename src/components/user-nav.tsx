@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { CreditCard, LogOut, Settings, UserCircle } from 'lucide-react';
+import { CreditCard, LogOut, Settings, UserCircle, Users } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import Link from 'next/link';
 import { Skeleton } from './ui/skeleton';
@@ -68,6 +68,12 @@ export function UserNav() {
             <Link href="/settings">
                 <UserCircle className="me-2 h-4 w-4" />
                 <span>الملف الشخصي</span>
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+             <Link href="/users">
+                <Users className="me-2 h-4 w-4" />
+                <span>إدارة المستخدمين</span>
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>

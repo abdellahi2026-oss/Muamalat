@@ -1,11 +1,13 @@
 
+
 export type ContractStatus = 'active' | 'completed' | 'overdue' | 'archived';
 
 export type User = {
+  id: string;
   name: string;
   email: string;
-  username: string;
   role: 'admin' | 'merchant';
+  status: 'active' | 'inactive';
 };
 
 export type Contract = {
@@ -33,6 +35,7 @@ export type MudarabahContract = Contract & {
   };
   capital: number;
   investmentArea: string;
+  amount: number;
 };
 
 export type MusharakahContract = Contract & {
@@ -61,3 +64,4 @@ export type CommodityCard = {
   issuingBody: string;
   status: 'available' | 'in-use' | 'expired';
 };
+

@@ -1,11 +1,12 @@
 
 import { AnyContract, CommodityCard, User } from './types';
 
-export const userData: User = {
-  name: 'أحمد محمود',
-  email: 'ahmed.mahmoud@example.com',
-  avatar: '',
-};
+export const allUsers: User[] = [
+  { id: 'usr_001', name: 'أحمد محمود', email: 'ahmed.mahmoud@example.com', role: 'admin', status: 'active' },
+  { id: 'usr_002', name: 'فاطمة علي', email: 'fatima.ali@example.com', role: 'merchant', status: 'active' },
+  { id: 'usr_003', name: 'خالد حسين', email: 'khaled.hussain@example.com', role: 'merchant', status: 'inactive' },
+  { id: 'usr_004', name: 'مريم يوسف', email: 'mariam.youssef@example.com', role: 'merchant', status: 'active' },
+];
 
 export const allContracts: AnyContract[] = [
   {
@@ -26,6 +27,7 @@ export const allContracts: AnyContract[] = [
     type: 'mudarabah',
     clientName: 'صندوق الاستثمار العقاري',
     capital: 500000,
+    amount: 500000,
     profitSharingRatio: { investor: 60, manager: 40 },
     investmentArea: 'تطوير عقاري',
     startDate: '2024-01-15',
