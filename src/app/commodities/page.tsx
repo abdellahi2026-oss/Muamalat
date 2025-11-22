@@ -23,7 +23,7 @@ import type { CommodityCard } from '@/lib/types';
 
 export default function CommoditiesPage() {
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('ar-SA', {
+    return new Intl.NumberFormat('fr-FR', {
       style: 'currency',
       currency: 'SAR',
     }).format(amount);

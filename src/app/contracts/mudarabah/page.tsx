@@ -27,7 +27,7 @@ export default function MudarabahPage() {
   ) as MudarabahContract[];
 
     const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('ar-SA', {
+    return new Intl.NumberFormat('fr-FR', {
       style: 'currency',
       currency: 'SAR',
     }).format(amount);

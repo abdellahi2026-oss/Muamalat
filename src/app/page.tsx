@@ -81,7 +81,7 @@ export default function DashboardPage() {
   } satisfies ChartConfig;
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('ar-SA', {
+    return new Intl.NumberFormat('fr-FR', {
       style: 'currency',
       currency: 'SAR',
     }).format(amount);
