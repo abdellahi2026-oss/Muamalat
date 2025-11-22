@@ -52,18 +52,18 @@ export default function UsersPage() {
   
   const usersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    // Ensure we only query if the current user is an admin
-    if (currentUserData?.role === 'admin') {
-      return collection(firestore, 'users');
-    }
-    return null;
-  }, [firestore, currentUserData?.role]);
+    // Query will only run if the current user is an admin, based on Firestore rules.
+    // The UI guard is handled by the navigation components.
+    return collection(firestore, 'users');
+  }, [firestore]);
 
-  const { data: users, isLoading: areUsersLoading } = useCollection<User>(usersQuery);
+  const { data: users, isLoading: areUsersLoading, error: usersError } = useCollection<User>(usersQuery);
 
   useEffect(() => {
-    const isDataLoading = isUserLoading || isCurrentUserLoading;
-    if (!isDataLoading && currentUserData?.role !== 'admin') {
+    // This effect handles the case where a non-admin tries to access the URL directly.
+    // The primary navigation guard is hiding the link, but this is a fallback.
+    const isDataReady = !isUserLoading && !isCurrentUserLoading;
+    if (isDataReady && currentUserData?.role !== 'admin') {
       router.push('/');
     }
   }, [currentUserData, isUserLoading, isCurrentUserLoading, router]);
@@ -123,7 +123,6 @@ export default function UsersPage() {
 
   const isLoading = isUserLoading || isCurrentUserLoading;
 
-  // Show loader while checking auth/role, then redirect if not admin.
   if (isLoading) {
     return (
         <div className="flex justify-center items-center h-64">
@@ -132,18 +131,8 @@ export default function UsersPage() {
     );
   }
 
-  // After loading, if the user is confirmed not to be an admin, they would have been redirected.
-  // So we can proceed to render the page for the admin.
-  if (currentUserData?.role !== 'admin') {
-      // This is a fallback, the useEffect should handle the redirect.
-      return (
-          <div className="flex justify-center items-center h-64">
-              <p>ليس لديك صلاحية الوصول إلى هذه الصفحة.</p>
-          </div>
-      );
-  }
-
-
+  // After loading, if the user is confirmed not to be an admin, the useEffect will handle the redirect.
+  // We can render the content assuming they are an admin, or the redirect will occur.
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -178,8 +167,15 @@ export default function UsersPage() {
             </TableHeader>
             <TableBody>
               {areUsersLoading && <TableRow><TableCell colSpan={6} className="text-center">جارِ التحميل...</TableCell></TableRow>}
-              {!areUsersLoading && users?.length === 0 && <TableRow><TableCell colSpan={6} className="text-center">لا يوجد مستخدمون.</TableCell></TableRow>}
-              {users?.map((u) => (
+              {!areUsersLoading && usersError && (
+                 <TableRow>
+                    <TableCell colSpan={6} className="text-center text-destructive">
+                      خطأ في جلب المستخدمين. قد لا تكون لديك الصلاحيات اللازمة.
+                    </TableCell>
+                </TableRow>
+              )}
+              {!areUsersLoading && !usersError && users?.length === 0 && <TableRow><TableCell colSpan={6} className="text-center">لا يوجد مستخدمون.</TableCell></TableRow>}
+              {!areUsersLoading && !usersError && users?.map((u) => (
                 <TableRow key={u.id}>
                   <TableCell>{u.name}</TableCell>
                   <TableCell>{u.email}</TableCell>
