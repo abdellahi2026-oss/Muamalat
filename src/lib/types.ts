@@ -3,6 +3,8 @@ export type ContractStatus = 'active' | 'completed' | 'overdue' | 'archived';
 export type User = {
   name: string;
   email: string;
+  username: string;
+  role: 'admin' | 'merchant';
 };
 
 export type Contract = {
@@ -55,4 +57,6 @@ export type CommodityCard = {
   nominalValue: number;
   issuingBody: string;
   status: 'available' | 'in-use' | 'expired';
+  purchasePrice?: number;
+  sellingPrice?: number;
 };

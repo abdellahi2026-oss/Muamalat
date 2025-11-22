@@ -26,10 +26,11 @@ import {
 } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 
 const formSchema = z.object({
-  email: z.string().email({ message: 'الرجاء إدخال بريد إلكتروني صالح.' }),
+  username: z.string().min(3, { message: 'يجب أن يكون اسم المستخدم 3 أحرف على الأقل.' }),
   password: z.string().min(6, { message: 'يجب أن تكون كلمة المرور 6 أحرف على الأقل.' }),
 });
 
@@ -39,31 +40,57 @@ export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
   const auth = useAuth();
+  const firestore = useFirestore();
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      email: '',
+      username: '',
       password: '',
     },
   });
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     try {
-      if (!auth) {
-        throw new Error('Firebase Auth is not initialized');
+      if (!auth || !firestore) {
+        throw new Error('Firebase is not initialized');
       }
-      await signInWithEmailAndPassword(auth, data.email, data.password);
+
+      // 1. Find user by username
+      const usersRef = collection(firestore, 'users');
+      const q = query(usersRef, where('username', '==', data.username));
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        throw new Error('User not found');
+      }
+
+      // 2. Get email from user document
+      const userDoc = querySnapshot.docs[0];
+      const userData = userDoc.data();
+      const email = userData.email;
+
+      if (!email) {
+        throw new Error('Email not found for this user.');
+      }
+
+      // 3. Sign in with email and password
+      await signInWithEmailAndPassword(auth, email, data.password);
       toast({
         title: 'تم تسجيل الدخول بنجاح!',
         description: 'أهلاً بعودتك.',
       });
       router.push('/');
     } catch (error) {
-      const authError = error as AuthError;
       let message = 'حدث خطأ غير متوقع.';
-      if (authError.code === 'auth/user-not-found' || authError.code === 'auth/wrong-password' || authError.code === 'auth/invalid-credential') {
-        message = 'البريد الإلكتروني أو كلمة المرور غير صحيحة.';
+      if (error instanceof Error && (error.message === 'User not found' || error.message.includes('invalid-credential'))) {
+          message = 'اسم المستخدم أو كلمة المرور غير صحيحة.';
+      } else if ((error as AuthError).code) {
+        const authError = error as AuthError;
+        if (authError.code === 'auth/user-not-found' || authError.code === 'auth/wrong-password' || authError.code === 'auth/invalid-credential') {
+            message = 'اسم المستخدم أو كلمة المرور غير صحيحة.';
+        }
       }
+      
       toast({
         variant: 'destructive',
         title: 'فشل تسجيل الدخول',
@@ -78,7 +105,7 @@ export default function LoginPage() {
         <CardHeader>
           <CardTitle className="text-2xl">تسجيل الدخول</CardTitle>
           <CardDescription>
-            أدخل بريدك الإلكتروني وكلمة المرور للوصول إلى حسابك
+            أدخل اسم المستخدم وكلمة المرور للوصول إلى حسابك
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -86,14 +113,13 @@ export default function LoginPage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
               <FormField
                 control={form.control}
-                name="email"
+                name="username"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>البريد الإلكتروني</FormLabel>
+                    <FormLabel>اسم المستخدم</FormLabel>
                     <FormControl>
                       <Input
-                        type="email"
-                        placeholder="m@example.com"
+                        placeholder="admin"
                         {...field}
                       />
                     </FormControl>

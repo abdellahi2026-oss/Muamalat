@@ -13,17 +13,134 @@
           "type": "string",
           "format": "email",
           "description": "The user's email address."
+        },
+        "username": {
+          "type": "string",
+          "description": "The user's unique username."
+        },
+        "role": {
+          "type": "string",
+          "description": "The role of the user.",
+          "enum": [
+            "admin",
+            "merchant"
+          ]
         }
       },
       "required": [
         "name",
-        "email"
+        "email",
+        "username",
+        "role"
+      ]
+    },
+    "contract": {
+      "title": "Contract",
+      "description": "A financial contract.",
+      "type": "object",
+      "properties": {
+        "clientName": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "number"
+        },
+        "startDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "endDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "active",
+            "completed",
+            "overdue",
+            "archived"
+          ]
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "murabaha",
+            "mudarabah",
+            "musharakah",
+            "wakalah"
+          ]
+        }
+      },
+      "required": [
+        "clientName",
+        "amount",
+        "startDate",
+        "endDate",
+        "status",
+        "type"
+      ]
+    },
+    "commodityCard": {
+      "title": "Commodity Card",
+      "description": "A commodity card for transactions.",
+      "type": "object",
+      "properties": {
+        "cardNumber": {
+          "type": "string"
+        },
+        "nominalValue": {
+          "type": "number"
+        },
+        "issuingBody": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "available",
+            "in-use",
+            "expired"
+          ]
+        },
+        "purchasePrice": {
+          "type": "number"
+        },
+        "sellingPrice": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "cardNumber",
+        "nominalValue",
+        "issuingBody",
+        "status"
       ]
     }
   },
   "auth": {
     "providers": [
-      "anonymous"
+      "email-password"
     ]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/user"
+      },
+      "description": "Stores user profile information."
+    },
+    "/contracts/{contractId}": {
+      "schema": {
+        "$ref": "#/entities/contract"
+      },
+      "description": "Stores all types of contracts."
+    },
+    "/commodityCards/{cardId}": {
+      "schema": {
+        "$ref": "#/entities/commodityCard"
+      },
+      "description": "Stores commodity card information."
+    }
   }
 }
