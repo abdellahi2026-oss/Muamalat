@@ -59,16 +59,15 @@ export default function LoginPage() {
     const email = data.username.includes('@') ? data.username : `${data.username}@muamalat.app`;
 
     try {
+      // The onAuthStateChanged listener in AppLayout will handle the redirect.
       await signInWithEmailAndPassword(auth, email, data.password);
-      // The AppLayout component will handle the redirection after the user state is updated.
-      // No need to router.push here, it creates a race condition.
     } catch (error) {
       const signInError = error as AuthError;
       
+      // If admin user doesn't exist, create it.
+      // The onAuthStateChanged listener in AppLayout will then handle the redirect after creation.
       if (signInError.code === 'auth/user-not-found' && email === 'admin@muamalat.app') {
         try {
-          // If admin user doesn't exist, create it.
-          // The onAuthStateChanged listener in AppLayout will then handle the redirect.
           await createUserWithEmailAndPassword(auth, email, data.password);
         } catch (creationError) {
            const creationAuthError = creationError as AuthError;
@@ -81,6 +80,7 @@ export default function LoginPage() {
         return; 
       }
 
+      // Handle other sign-in errors
       let message = 'حدث خطأ غير متوقع.';
       switch (signInError.code) {
         case 'auth/wrong-password':
