@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -51,7 +52,7 @@ export default function LoginPage() {
     },
   });
 
-  const onSubmit: SubmitHandler<FormValues> = (data) => {
+  const onSubmit: SubmitHandler<FormValues> = async (data) => {
     if (!auth || !firestore) {
       toast({
         variant: 'destructive',
@@ -63,67 +64,72 @@ export default function LoginPage() {
 
     const email = data.username.includes('@') ? data.username : `${data.username}@muamalat.app`;
 
-    signInWithEmailAndPassword(auth, email, data.password)
-        .catch((error) => {
-            const signInError = error as AuthError;
+    try {
+        await signInWithEmailAndPassword(auth, email, data.password);
+        // Auth state change will handle the redirect.
+    } catch (error) {
+        const signInError = error as AuthError;
+        
+        if (signInError.code === 'auth/user-not-found' && email === 'admin@muamalat.app') {
+            // Admin user does not exist, let's create it.
+            try {
+                const userCredential = await createUserWithEmailAndPassword(auth, email, data.password);
+                const adminUser = userCredential.user;
+                
+                const batch = writeBatch(firestore);
+
+                // Create user profile document
+                const userDocRef = doc(firestore, 'users', adminUser.uid);
+                const userData: User = {
+                    id: adminUser.uid,
+                    name: 'Admin',
+                    email: adminUser.email!,
+                    role: 'admin',
+                    status: 'active',
+                };
+                batch.set(userDocRef, userData);
             
-            if (signInError.code === 'auth/user-not-found' && email === 'admin@muamalat.app') {
-                createUserWithEmailAndPassword(auth, email, data.password)
-                    .then(async (userCredential) => {
-                         const adminUser = userCredential.user;
-                         const batch = writeBatch(firestore);
+                // Create admin role marker document
+                const adminDocRef = doc(firestore, 'admins', adminUser.uid);
+                batch.set(adminDocRef, {});
 
-                         const userDocRef = doc(firestore, 'users', adminUser.uid);
-                         const userData: User = {
-                            id: adminUser.uid,
-                            name: 'Admin',
-                            email: adminUser.email!,
-                            role: 'admin',
-                            status: 'active',
-                         };
-                         batch.set(userDocRef, userData);
-                    
-                         const adminDocRef = doc(firestore, 'admins', adminUser.uid);
-                         batch.set(adminDocRef, {});
-
-                         await batch.commit();
-                         // Auth state change will handle the redirect.
-                    })
-                    .catch((creationError) => {
-                        const creationAuthError = creationError as AuthError;
-                        toast({
-                            variant: 'destructive',
-                            title: 'فشل إنشاء حساب المدير',
-                            description: creationAuthError.message || 'حدث خطأ أثناء محاولة إنشاء حساب المدير.',
-                        });
-                    });
-                return;
+                await batch.commit();
+                // Auth state change will handle the redirect after creation.
+            } catch (creationError) {
+                const creationAuthError = creationError as AuthError;
+                toast({
+                    variant: 'destructive',
+                    title: 'فشل إنشاء حساب المدير',
+                    description: creationAuthError.message || 'حدث خطأ أثناء محاولة إنشاء حساب المدير.',
+                });
             }
+            return;
+        }
 
-            // Handle other sign-in errors
-            let message = 'حدث خطأ غير متوقع.';
-            switch (signInError.code) {
-                case 'auth/wrong-password':
-                case 'auth/invalid-credential':
-                case 'auth/user-not-found':
-                message = 'كلمة مرور أو اسم مستخدم غير صحيح';
-                break;
-                case 'auth/too-many-requests':
-                message = 'تم حظر الوصول مؤقتًا بسبب كثرة محاولات تسجيل الدخول الفاشلة.';
-                break;
-                case 'auth/network-request-failed':
-                message = 'فشل الاتصال بالشبكة. يرجى التحقق من اتصالك بالإنترنت.';
-                break;
-                default:
-                message = signInError.message || 'كلمة مرور أو اسم مستخدم غير صحيح';
-                break;
-            }
-            toast({
-                variant: 'destructive',
-                title: 'فشل تسجيل الدخول',
-                description: message,
-            });
+        // Handle other sign-in errors
+        let message = 'حدث خطأ غير متوقع.';
+        switch (signInError.code) {
+            case 'auth/wrong-password':
+            case 'auth/invalid-credential':
+            case 'auth/user-not-found':
+            message = 'كلمة مرور أو اسم مستخدم غير صحيح';
+            break;
+            case 'auth/too-many-requests':
+            message = 'تم حظر الوصول مؤقتًا بسبب كثرة محاولات تسجيل الدخول الفاشلة.';
+            break;
+            case 'auth/network-request-failed':
+            message = 'فشل الاتصال بالشبكة. يرجى التحقق من اتصالك بالإنترنت.';
+            break;
+            default:
+            message = signInError.message || 'كلمة مرور أو اسم مستخدم غير صحيح';
+            break;
+        }
+        toast({
+            variant: 'destructive',
+            title: 'فشل تسجيل الدخول',
+            description: message,
         });
+    }
   };
 
   return (
