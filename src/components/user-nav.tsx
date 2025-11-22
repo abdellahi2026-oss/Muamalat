@@ -48,7 +48,7 @@ export function UserNav() {
         <Button variant="ghost" className="relative h-10 w-10 rounded-full">
           <Avatar className="h-10 w-10">
             <AvatarFallback className="bg-primary text-primary-foreground">
-              {user.displayName?.charAt(0) || user.email?.charAt(0) || 'A'}
+              <UserIcon className="h-5 w-5" />
             </AvatarFallback>
           </Avatar>
         </Button>
