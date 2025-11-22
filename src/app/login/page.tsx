@@ -62,49 +62,42 @@ export default function LoginPage() {
 
     try {
       await signInWithEmailAndPassword(auth, email, data.password);
-      toast({
-        title: 'تم تسجيل الدخول بنجاح!',
-        description: 'أهلاً بعودتك.',
-      });
       // The AppLayout component will handle the redirection after the user state is updated.
-      // No need for router.push('/') here.
     } catch (error) {
       const signInError = error as AuthError;
       
-      let message = 'حدث خطأ غير متوقع.';
-      if (signInError.code) {
-        switch (signInError.code) {
-          case 'auth/user-not-found':
-          case 'auth/wrong-password':
-          case 'auth/invalid-credential':
-             if (email === 'admin@muamalat.app') {
-                // Try to create the admin user if it doesn't exist
-                try {
-                  await createUserWithEmailAndPassword(auth, email, data.password);
-                   toast({
-                    title: 'تم إنشاء حساب المدير بنجاح!',
-                    description: 'تم تسجيل دخولك كمدير.',
-                  });
-                  // AppLayout will handle redirect
-                  return;
-                } catch (creationError) {
-                   message = 'فشل إنشاء حساب المدير.';
-                }
-
-             } else {
-                message = 'mot de passe ou username incorrecte';
-             }
-            break;
-          case 'auth/too-many-requests':
-            message = 'تم حظر الوصول مؤقتًا بسبب كثرة محاولات تسجيل الدخول الفاشلة.';
-            break;
-          case 'auth/network-request-failed':
-            message = 'فشل الاتصال بالشبكة. يرجى التحقق من اتصالك بالإنترنت.';
-            break;
-          default:
-            message = 'mot de passe ou username incorrecte';
-            break;
+      if (signInError.code === 'auth/user-not-found' && email === 'admin@muamalat.app') {
+        try {
+          // If admin user doesn't exist, create it and then sign in.
+          await createUserWithEmailAndPassword(auth, email, data.password);
+          await signInWithEmailAndPassword(auth, email, data.password);
+          // AppLayout will redirect upon successful login.
+        } catch (creationError) {
+          toast({
+            variant: 'destructive',
+            title: 'فشل إنشاء حساب المدير',
+            description: 'حدث خطأ أثناء محاولة إنشاء حساب المدير.',
+          });
         }
+        return; 
+      }
+
+      let message = 'حدث خطأ غير متوقع.';
+      switch (signInError.code) {
+        case 'auth/wrong-password':
+        case 'auth/invalid-credential':
+        case 'auth/user-not-found':
+          message = 'كلمة مرور أو اسم مستخدم غير صحيح';
+          break;
+        case 'auth/too-many-requests':
+          message = 'تم حظر الوصول مؤقتًا بسبب كثرة محاولات تسجيل الدخول الفاشلة.';
+          break;
+        case 'auth/network-request-failed':
+          message = 'فشل الاتصال بالشبكة. يرجى التحقق من اتصالك بالإنترنت.';
+          break;
+        default:
+          message = 'كلمة مرور أو اسم مستخدم غير صحيح';
+          break;
       }
       toast({
         variant: 'destructive',
