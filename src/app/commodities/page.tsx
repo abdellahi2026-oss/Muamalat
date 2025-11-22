@@ -72,10 +72,25 @@ export default function CurrentTransactionsPage() {
 
     const lowercasedQuery = searchQuery.toLowerCase();
     
-    return allContracts.filter(contract => 
-      contract.clientName?.toLowerCase().includes(lowercasedQuery) ||
-      getContractTypeArabic(contract.type).toLowerCase().includes(lowercasedQuery)
-    );
+    return allContracts.filter(contract => {
+        const clientNameMatch = contract.clientName?.toLowerCase().includes(lowercasedQuery);
+        const typeMatch = getContractTypeArabic(contract.type).toLowerCase().includes(lowercasedQuery);
+        let partnerMatch = false;
+        let agentMatch = false;
+
+        if (contract.type === 'musharakah') {
+            const musharakah = contract as MusharakahContract;
+            // Assuming partnerIds is an array of names for simplicity. In a real app, you'd fetch partner names.
+            partnerMatch = musharakah.partnerIds.some(p => p.toLowerCase().includes(lowercasedQuery));
+        }
+
+        if (contract.type === 'wakalah') {
+            const wakalah = contract as WakalahContract;
+            agentMatch = wakalah.agentName?.toLowerCase().includes(lowercasedQuery);
+        }
+
+        return clientNameMatch || typeMatch || partnerMatch || agentMatch;
+    });
   }, [allContracts, searchQuery]);
 
 
@@ -120,6 +135,19 @@ export default function CurrentTransactionsPage() {
     }
   };
 
+  const renderClientOrProject = (contract: AnyContract) => {
+    let details = contract.clientName;
+    if (contract.type === 'musharakah') {
+        // For simplicity, we just join IDs. A real app might fetch names.
+        const partners = (contract as MusharakahContract).partnerIds.slice(0, 2).join(', ');
+        details += ` (شركاء: ${partners}...)`;
+    }
+    if (contract.type === 'wakalah') {
+        details += ` (وكيل: ${(contract as WakalahContract).agentName})`;
+    }
+    return details;
+  }
+
   return (
     <div className="space-y-6">
       <div className="space-y-1">
@@ -159,7 +187,7 @@ export default function CurrentTransactionsPage() {
               )}
               {!isLoading && filteredContracts.map((contract) => (
                 <TableRow key={contract.id}>
-                  <TableCell>{contract.clientName}</TableCell>
+                  <TableCell>{renderClientOrProject(contract)}</TableCell>
                   <TableCell>{getContractTypeArabic(contract.type)}</TableCell>
                   <TableCell>{contract.amount ? formatCurrency(contract.amount) : 'N/A'}</TableCell>
                   <TableCell>{getStatusBadge(contract.status)}</TableCell>
