@@ -66,10 +66,9 @@ export default function LoginPage() {
       
       if (signInError.code === 'auth/user-not-found' && email === 'admin@muamalat.app') {
         try {
-          // If admin user doesn't exist, create it and then sign in.
+          // If admin user doesn't exist, create it.
+          // The onAuthStateChanged listener in AppLayout will then handle the redirect.
           await createUserWithEmailAndPassword(auth, email, data.password);
-          // After creation, signIn will be handled by the auth state listener in AppLayout
-          // which will trigger the redirect. No need to call signIn again here.
         } catch (creationError) {
            const creationAuthError = creationError as AuthError;
           toast({
