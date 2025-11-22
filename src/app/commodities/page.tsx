@@ -65,6 +65,20 @@ export default function CurrentTransactionsPage() {
 
   const isLoading = loadingMurabaha || loadingMudarabah || loadingMusharakah || loadingWakalah;
 
+  const getContractTypeArabic = (type: AnyContract['type']) => {
+    switch (type) {
+      case 'murabaha':
+        return 'مرابحة';
+      case 'mudarabah':
+        return 'مضاربة';
+      case 'musharakah':
+        return 'مشاركة';
+      case 'wakalah':
+        return 'وكالة';
+      default:
+        return 'عقد';
+    }
+  };
 
   const filteredContracts = useMemo(() => {
     if (!allContracts) return [];
@@ -80,7 +94,6 @@ export default function CurrentTransactionsPage() {
 
         if (contract.type === 'musharakah') {
             const musharakah = contract as MusharakahContract;
-            // Assuming partnerIds is an array of names for simplicity. In a real app, you'd fetch partner names.
             partnerMatch = musharakah.partnerIds.some(p => p.toLowerCase().includes(lowercasedQuery));
         }
 
@@ -101,21 +114,6 @@ export default function CurrentTransactionsPage() {
     }).format(amount);
   };
   
-    const getContractTypeArabic = (type: AnyContract['type']) => {
-    switch (type) {
-      case 'murabaha':
-        return 'مرابحة';
-      case 'mudarabah':
-        return 'مضاربة';
-      case 'musharakah':
-        return 'مشاركة';
-      case 'wakalah':
-        return 'وكالة';
-      default:
-        return 'عقد';
-    }
-  };
-
   const getStatusBadge = (status: AnyContract['status']) => {
     switch (status) {
       case 'active':
@@ -138,7 +136,6 @@ export default function CurrentTransactionsPage() {
   const renderClientOrProject = (contract: AnyContract) => {
     let details = contract.clientName;
     if (contract.type === 'musharakah') {
-        // For simplicity, we just join IDs. A real app might fetch names.
         const partners = (contract as MusharakahContract).partnerIds.slice(0, 2).join(', ');
         details += ` (شركاء: ${partners}...)`;
     }
@@ -203,5 +200,3 @@ export default function CurrentTransactionsPage() {
     </div>
   );
 }
-
-    
