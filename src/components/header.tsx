@@ -59,7 +59,7 @@ export function Header() {
 
        <div className="flex flex-1 items-center justify-end gap-2">
         <div className="relative flex-1 md:grow-0">
-          <Button onClick={() => setSearchVisible(!searchVisible)} variant="secondary" className="md:hidden">
+          <Button onClick={() => setSearchVisible(!searchVisible)} variant="secondary" className="md:hidden h-10 px-4 py-2">
             <Search className="me-2" />
             بحث
           </Button>
@@ -100,5 +100,3 @@ export function Header() {
     </header>
   );
 }
-
-    
