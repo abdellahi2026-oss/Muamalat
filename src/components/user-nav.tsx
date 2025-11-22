@@ -18,17 +18,15 @@ import Link from 'next/link';
 import { Skeleton } from './ui/skeleton';
 import { useAuth } from '@/firebase';
 import { useRouter } from 'next/navigation';
+import { useUser } from '@/firebase';
 
-type UserNavProps = {
-  user: FirebaseUser | null;
-  loading: boolean;
-};
-
-export function UserNav({ user, loading }: UserNavProps) {
+export function UserNav() {
   const auth = useAuth();
   const router = useRouter();
+  const { user, loading } = useUser();
 
   const handleLogout = async () => {
+    if (!auth) return;
     await signOut(auth);
     router.push('/login');
   };
