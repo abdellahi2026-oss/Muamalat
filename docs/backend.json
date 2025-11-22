@@ -23,7 +23,7 @@
         "role": {
           "type": "string",
           "description": "The role of the user.",
-          "enum": ["admin", "merchant"]
+          "enum": ["merchant"]
         },
         "status": {
           "type": "string",
@@ -158,6 +158,10 @@
           "type": "string",
           "description": "Unique identifier for the Musharakah contract."
         },
+        "clientId": {
+          "type": "string",
+          "description": "Reference to the Client who owns this contract."
+        },
         "partnerIds": {
           "type": "array",
           "description": "References to the Partners involved in this contract. (Relationship: Partner N:N MusharakahContract)",
@@ -194,6 +198,7 @@
       },
       "required": [
         "id",
+        "clientId",
         "partnerIds",
         "contributions",
         "ownershipPercentages",
@@ -348,8 +353,7 @@
   },
   "auth": {
     "providers": [
-      "password",
-      "anonymous"
+      "password"
     ]
   },
   "firestore": {
@@ -411,14 +415,18 @@
         }
       },
       {
-        "path": "/musharakahContracts/{musharakahContractId}",
+        "path": "/clients/{clientId}/musharakahContracts/{musharakahContractId}",
         "definition": {
           "entityName": "MusharakahContract",
           "schema": {
             "$ref": "#/backend/entities/MusharakahContract"
           },
-          "description": "Stores Musharakah contracts. The 'partnerIds' array is used for authorization.",
+          "description": "Stores Musharakah contracts associated with a client. The 'clientId' is used for authorization.",
           "params": [
+             {
+              "name": "clientId",
+              "description": "The unique identifier for the client."
+            },
             {
               "name": "musharakahContractId",
               "description": "The unique identifier for the Musharakah contract."
@@ -494,7 +502,8 @@
           ]
         }
       }
-    ],
-    "reasoning": "The Firestore structure is designed to manage Islamic finance contracts (Murabaha, Mudarabah, Musharakah, Wakalah) and commodity cards, focusing on authorization independence and scalability. It uses path-based ownership for client-related contracts and a dedicated collection for commodity cards. \n\nAuthorization Independence is achieved through denormalization. Specifically, for Murabaha, Mudarabah, and Wakalah contracts, the `clientId` from the `Client` document is included in each contract document. This eliminates the need for `get()` calls to the `Client` document during security rule evaluation. For Musharakah contracts, the `partnerIds` array is stored directly within the contract, enabling rules to directly assess partner involvement without additional lookups.\n\nTo support QAPs and segregation: Each contract type (Murabaha, Mudarabah, Musharakah, Wakalah) has its own top-level collection. This structural segregation ensures that each collection has a homogeneous security posture, which simplifies security rules and ensures performant `list` operations, enabling secure filtering by contract type. The `/commodityCards` collection is separate, as it has no concept of user-specific access and represents global data.  Path-based ownership is employed for Murabaha, Mudarabah, and Wakalah contracts for straightforward ownership security rules."
+    ]
   }
 }
+
+    

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -194,27 +195,15 @@ export function AddTransactionDialog() {
             };
             break;
         case 'musharakah':
-             const musharakahDocData = {
+            collectionName = 'musharakahContracts';
+            contractData = {
+                ...contractData,
                 partnerIds: [user.uid],
                 profitDistribution: data.profitDistribution,
-                status: 'active',
-                startDate: data.startDate.toISOString(),
-                endDate: data.endDate.toISOString(),
-                clientName: data.clientName,
                 amount: data.amount,
                 type: 'musharakah',
             };
-             try {
-                const newDocRef = doc(collection(firestore, 'musharakahContracts'));
-                await setDoc(newDocRef, {...musharakahDocData, id: newDocRef.id});
-                toast({ title: 'تمت إضافة المعاملة بنجاح!', description: `تم إنشاء عقد مشاركة جديد لمشروع ${data.clientName}.` });
-                setOpen(false);
-                form.reset();
-            } catch (error) {
-                console.error('Error adding document: ', error);
-                toast({ variant: 'destructive', title: 'حدث خطأ', description: 'لم نتمكن من حفظ المعاملة. يرجى المحاولة مرة أخرى.' });
-            }
-            return;
+            break;
         case 'wakalah':
             collectionName = 'wakalahContracts';
             contractData = {
@@ -594,3 +583,5 @@ export function AddTransactionDialog() {
     </Dialog>
   );
 }
+
+    

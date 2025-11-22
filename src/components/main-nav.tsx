@@ -105,12 +105,21 @@ export function MainNav() {
           )}
         >
           <CreditCard className="h-4 w-4" />
-          المعاملات الحالية
+          المعاملات
         </Link>
       </nav>
 
       {/* Desktop Nav */}
       <nav className="hidden items-center gap-6 text-sm font-medium md:flex ml-6">
+        <Link
+          href="/"
+          className={cn(
+            'transition-colors hover:text-primary-foreground/80',
+            pathname === '/' ? 'text-primary-foreground' : 'text-primary-foreground/60'
+          )}
+        >
+          لوحة التحكم
+        </Link>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
              <Button
@@ -147,9 +156,11 @@ export function MainNav() {
             pathname === '/commodities' ? 'text-primary-foreground' : 'text-primary-foreground/60'
           )}
         >
-          المعاملات الحالية
+          المعاملات
         </Link>
       </nav>
     </>
   );
 }
+
+    

@@ -1,26 +1,4 @@
 
-/**
- * Core Philosophy: This ruleset enforces a user-centric security model for managing Islamic finance contracts.
- * Client-specific data and contracts are strictly isolated, accessible only by the owning client. Shared contracts
- * (Musharakah) are accessible only by the participating partners. Admin users have elevated privileges for user management.
- *
- * Data Structure:
- * - /users/{userId}: Stores user profile information. Only admins can list/write, but users can read their own profile.
- * - /admins/{userId}: A separate, locked-down collection to mark which users have admin privileges. This avoids circular rule dependencies.
- * - /clients/{clientId}: Each user has a root client document. All their personal contracts
- *   (Murabaha, Mudarabah, Wakalah) are stored in subcollections under this path.
- * - /musharakahContracts: A top-level collection for shared partnership contracts.
- * - /commodityCards, /agents, /partners: Top-level collections for publicly readable reference data.
- *
- * Key Security Decisions:
- * - Admin Verification via /admins collection: To check if a user is an admin, we check for the existence of a document in `/admins/{userId}`.
- *   This is secure and avoids the Firestore anti-pattern of reading from a collection while evaluating rules for that same collection.
- * - Strict Ownership: A user can only access data under their own `/clients/{userId}` path.
- * - Denormalization for Authorization: To ensure fast and secure rules, authorization data is denormalized.
- *   - Musharakah contracts contain a `partnerIds` array, allowing direct access checks without extra database reads.
- *   - Client-specific contracts contain a `clientId` field, ensuring relational integrity with the parent path.
- * - Public Data: Reference data is publicly readable but locked down from client modification.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -43,16 +21,6 @@ service cloud.firestore {
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
-    
-    /**
-     * Checks if the requesting user has an 'admin' role by checking for a corresponding
-     * document in the `/admins` collection. This is the recommended secure way to
-     * manage roles without custom claims in a client-heavy environment.
-     */
-    function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
-    }
-
 
     /**
      * Checks if a document exists before an update or delete operation.
@@ -62,60 +30,21 @@ service cloud.firestore {
       return resource != null;
     }
 
-    /**
-     * Checks if an authenticated user is a partner in an existing Musharakah contract.
-     * Used for read, update, and delete operations on existing documents.
-     */
-    function isPartner() {
-      return isSignedIn() && request.auth.uid in resource.data.partnerIds;
-    }
-
-    /**
-     * Checks if the user creating a Musharakah contract is included in its partner list.
-     * Used for create operations where `resource` is not available.
-     */
-    function isCreatingAsPartner() {
-      return isSignedIn() && request.auth.uid in request.resource.data.partnerIds;
-    }
-
-    /**
-     * A composite function that verifies partnership and document existence.
-     * Improves readability for update/delete rules.
-     */
-    function isExistingPartner() {
-      return isPartner() && isExistingDoc();
-    }
-
-
     // --------------------------------------------------------------------------------
-    // User Management & Admin Role Marker
+    // User Management
     // --------------------------------------------------------------------------------
     
     /**
-     * @description Admins can manage all user profiles. Users can only read their own profile.
+     * @description Users can create and read their own profile. They cannot see other profiles.
      * @path /users/{userId}
-     * @allow (get) A user reading their own profile, or any admin reading any profile.
-     * @allow (list) Any signed-in user can list users. This is for dev purposes and should be locked down to admins in production.
-     * @allow (create, update, delete) Only users with the 'admin' role.
+     * @allow (read, create, update) A user managing their own profile.
+     * @deny (list, delete) Listing or deleting profiles is not allowed for clients.
      */
     match /users/{userId} {
-      allow get: if isOwner(userId) || isAdmin();
-      allow list: if isSignedIn(); // MODIFIED: Changed from isAdmin() to isSignedIn()
-      allow create, update, delete: if isAdmin();
+      allow read, create, update: if isOwner(userId);
+      allow list, delete: if false;
     }
-
-    /**
-     * @description The `admins` collection is a locked-down role-marking system.
-     *              No client can read or write to it. It is only used by security rules (`exists()`).
-     * @path /admins/{adminId}
-     * @deny (all) All client-side operations are forbidden.
-     * @principle This collection acts as a secure, server-side-only set of admin UIDs.
-     */
-    match /admins/{adminId} {
-      allow read, write: if false;
-    }
-
-
+    
     // --------------------------------------------------------------------------------
     // Client & User-Owned Data
     // --------------------------------------------------------------------------------
@@ -123,96 +52,56 @@ service cloud.firestore {
     /**
      * @description A user can create and manage their own client profile.
      * @path /clients/{clientId}
-     * @allow (get) A signed-in user reading their own document: `auth.uid == clientId`.
-     * @deny (get) A user trying to read another user's document: `auth.uid != clientId`.
-     * @deny (list) Any user trying to list all clients.
-     * @principle Restricts access to a user's own data tree and prevents user enumeration.
+     * @allow (read, write) A signed-in user managing their own document.
+     * @deny (list) Listing all clients is forbidden to prevent user enumeration.
      */
     match /clients/{clientId} {
-      allow get: if isOwner(clientId);
+      allow read, write: if isOwner(clientId);
       allow list: if false;
-      allow create: if isOwner(clientId) && request.resource.data.id == clientId;
-      allow update: if isOwner(clientId) && isExistingDoc() && request.resource.data.id == resource.data.id;
-      allow delete: if isOwner(clientId) && isExistingDoc();
     }
 
     /**
-     * @description Secures all user-owned contracts (Murabaha, Mudarabah, Wakalah) in their respective subcollections.
+     * @description Secures all user-owned contracts (Murabaha, Mudarabah, Wakalah, Musharakah) in their respective subcollections.
      * @path /clients/{clientId}/{contractCollection}/{contractId}
-     * @allow (create) The client creating a contract in their own subcollection.
-     * @deny (create) A user trying to create a contract under another client's path.
-     * @deny (update) A user trying to change the `clientId` of an existing contract.
+     * @allow (read, write) The client creating/managing a contract in their own subcollection.
+     * @deny (any) A user trying to access contracts under another client's path.
      * @principle Enforces strict data ownership for all documents within a user's data tree.
      */
     match /clients/{clientId}/{contractCollection}/{contractId} {
-      allow get, list: if isOwner(clientId);
-      allow create: if isOwner(clientId) && request.resource.data.clientId == clientId;
-      allow update: if isOwner(clientId) && isExistingDoc() && request.resource.data.clientId == resource.data.clientId;
-      allow delete: if isOwner(clientId) && isExistingDoc();
+      allow read, list, write: if isOwner(clientId) && request.resource.data.clientId == clientId;
     }
 
-
     // --------------------------------------------------------------------------------
-    // Shared Contracts
-    // --------------------------------------------------------------------------------
-
-    /**
-     * @description Partners can create, read, and manage shared Musharakah contracts.
-     * @path /musharakahContracts/{musharakahContractId}
-     * @allow (get) A user whose UID is in the `partnerIds` array reading the contract.
-     * @deny (get) A user whose UID is not in the `partnerIds` array.
-     * @allow (list) Any signed-in user can issue a query, but it must be filtered on the client-side
-     *               (e.g., `where('partnerIds', 'array-contains', currentUser.uid)`). The `get` rule
-     *               provides the ultimate document-level security.
-     * @principle Implements closed collaborator access using a denormalized list of members (`partnerIds`).
-     */
-    match /musharakahContracts/{musharakahContractId} {
-      allow get: if isPartner();
-      allow list: if isSignedIn();
-      allow create: if isCreatingAsPartner();
-      allow update: if isExistingPartner() && request.resource.data.partnerIds == resource.data.partnerIds;
-      allow delete: if isExistingPartner();
-    }
-
-
-    // --------------------------------------------------------------------------------
-    // Public Reference Data
+    // Public Reference Data (Read-Only)
     // --------------------------------------------------------------------------------
 
     /**
      * @description Commodity cards are public reference data, readable by anyone but not writable by clients.
      * @path /commodityCards/{commodityCardId}
-     * @allow (get, list) Any user, signed-in or not, can read this data.
-     * @deny (create, update, delete) All client-side write operations are blocked.
-     * @principle Provides public read access while protecting data integrity from client modification.
      */
     match /commodityCards/{commodityCardId} {
-      allow get, list: if true;
-      allow create, update, delete: if false; 
+      allow get, list: if isSignedIn();
+      allow write: if false; 
     }
 
     /**
-     * @description Agent information is public reference data, readable by anyone but not writable by clients.
+     * @description Agent information is public reference data.
      * @path /agents/{agentId}
-     * @allow (get, list) Any user, signed-in or not, can read this data.
-     * @deny (create, update, delete) All client-side write operations are blocked.
-     * @principle Provides public read access while protecting data integrity from client modification.
      */
     match /agents/{agentId} {
-      allow get, list: if true;
-      allow create, update, delete: if false;
+      allow get, list: if isSignedIn();
+      allow write: if false;
     }
 
     /**
-     * @description Partner information is public reference data, readable by anyone but not writable by clients.
+     * @description Partner information is public reference data.
      * @path /partners/{partnerId}
-     * @allow (get, list) Any user, signed-in or not, can read this data.
-     * @deny (create, update, delete) All client-side write operations are blocked.
-     * @principle Provides public read access while protecting data integrity from client modification.
      */
     match /partners/{partnerId} {
-      allow get, list: if true;
-      allow create, update, delete: if false;
+      allow get, list: if isSignedIn();
+      allow write: if false;
     }
   }
 }
+
+    

@@ -28,7 +28,7 @@ import {
 } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth, useFirestore } from '@/firebase';
-import { doc, writeBatch } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 
 
@@ -70,37 +70,35 @@ export default function LoginPage() {
     } catch (error) {
         const signInError = error as AuthError;
         
-        if (signInError.code === 'auth/user-not-found' && email === 'admin@muamalat.app') {
-            // Admin user does not exist, let's create it.
+        if (signInError.code === 'auth/user-not-found') {
+            // User does not exist, let's create it as a new merchant.
             try {
                 const userCredential = await createUserWithEmailAndPassword(auth, email, data.password);
-                const adminUser = userCredential.user;
+                const newUser = userCredential.user;
                 
-                const batch = writeBatch(firestore);
-
-                // Create user profile document
-                const userDocRef = doc(firestore, 'users', adminUser.uid);
+                // Create user profile document in /users collection
+                const userDocRef = doc(firestore, 'users', newUser.uid);
                 const userData: User = {
-                    id: adminUser.uid,
-                    name: 'Admin',
-                    email: adminUser.email!,
-                    role: 'admin',
+                    id: newUser.uid,
+                    name: data.username, // Use username as initial name
+                    email: newUser.email!,
+                    role: 'merchant', // All new users are merchants
                     status: 'active',
                 };
-                batch.set(userDocRef, userData);
-            
-                // Create admin role marker document
-                const adminDocRef = doc(firestore, 'admins', adminUser.uid);
-                batch.set(adminDocRef, {});
-
-                await batch.commit();
+                await setDoc(userDocRef, userData);
+                
                 // Auth state change will handle the redirect after creation.
+                toast({
+                  title: 'تم إنشاء الحساب بنجاح!',
+                  description: 'مرحباً بك في مدير المعاملات.',
+                });
+
             } catch (creationError) {
                 const creationAuthError = creationError as AuthError;
                 toast({
                     variant: 'destructive',
-                    title: 'فشل إنشاء حساب المدير',
-                    description: creationAuthError.message || 'حدث خطأ أثناء محاولة إنشاء حساب المدير.',
+                    title: 'فشل إنشاء الحساب',
+                    description: creationAuthError.message || 'حدث خطأ أثناء محاولة إنشاء حسابك.',
                 });
             }
             return;
@@ -111,7 +109,6 @@ export default function LoginPage() {
         switch (signInError.code) {
             case 'auth/wrong-password':
             case 'auth/invalid-credential':
-            case 'auth/user-not-found':
             message = 'كلمة مرور أو اسم مستخدم غير صحيح';
             break;
             case 'auth/too-many-requests':
@@ -138,7 +135,7 @@ export default function LoginPage() {
         <CardHeader>
           <CardTitle className="text-2xl">تسجيل الدخول</CardTitle>
           <CardDescription>
-            أدخل اسم المستخدم وكلمة المرور للوصول إلى حسابك
+            أدخل اسم المستخدم وكلمة المرور للوصول إلى حسابك. إذا لم يكن لديك حساب، سيتم إنشاء حساب جديد لك.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -175,7 +172,7 @@ export default function LoginPage() {
                 )}
               />
               <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? 'جارِ تسجيل الدخول...' : 'تسجيل الدخول'}
+                {form.formState.isSubmitting ? 'جارِ المعالجة...' : 'تسجيل الدخول أو إنشاء حساب'}
               </Button>
             </form>
           </Form>
@@ -184,3 +181,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+    

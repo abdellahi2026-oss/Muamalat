@@ -21,7 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import type { MusharakahContract } from '@/lib/types';
 import { format } from 'date-fns';
 import { useCollection, useFirestore, useMemoFirebase, useFirebase } from '@/firebase';
-import { query, collection, where } from 'firebase/firestore';
+import { collection } from 'firebase/firestore';
 
 
 export default function MusharakahPage() {
@@ -30,7 +30,7 @@ export default function MusharakahPage() {
 
   const contractsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
-    return query(collection(firestore, 'musharakahContracts'), where('partnerIds', 'array-contains', user.uid));
+    return collection(firestore, 'clients', user.uid, 'musharakahContracts');
   }, [firestore, user?.uid]);
 
   const { data: musharakahContracts, isLoading } = useCollection<MusharakahContract>(contractsQuery);
@@ -107,3 +107,5 @@ export default function MusharakahPage() {
     </div>
   );
 }
+
+    

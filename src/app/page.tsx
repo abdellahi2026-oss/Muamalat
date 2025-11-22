@@ -53,7 +53,7 @@ export default function DashboardPage() {
     
     const musharakahQuery = useMemoFirebase(() => {
         if (!firestore || !user?.uid) return null;
-        return query(collection(firestore, 'musharakahContracts'), where('partnerIds', 'array-contains', user.uid));
+        return collection(firestore, 'clients', user.uid, 'musharakahContracts');
     }, [firestore, user?.uid]);
 
     const wakalahQuery = useMemoFirebase(() => {
@@ -288,3 +288,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    

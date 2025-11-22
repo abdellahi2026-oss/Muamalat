@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { CreditCard, LogOut, Settings, UserCircle, Users } from 'lucide-react';
+import { LogOut, Settings, UserCircle } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import Link from 'next/link';
 import { Skeleton } from './ui/skeleton';
@@ -43,8 +43,8 @@ export function UserNav() {
     );
   }
 
-  const displayName = user.isAnonymous ? 'Admin' : user.displayName || user.email;
-  const displayEmail = user.isAnonymous ? 'admin@muamalat.app' : user.email;
+  const displayName = user.displayName || user.email;
+  const displayEmail = user.email;
 
 
   return (
@@ -76,18 +76,6 @@ export function UserNav() {
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-             <Link href="/users">
-                <Users className="me-2 h-4 w-4" />
-                <span>إدارة المستخدمين</span>
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-             <Link href="/settings">
-                <CreditCard className="me-2 h-4 w-4" />
-                <span>الفوترة</span>
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
             <Link href="/settings">
                 <Settings className="me-2 h-4 w-4" />
                 <span>الإعدادات</span>
@@ -103,3 +91,5 @@ export function UserNav() {
     </DropdownMenu>
   );
 }
+
+    
