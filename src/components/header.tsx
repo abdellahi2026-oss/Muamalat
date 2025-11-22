@@ -1,4 +1,3 @@
-
 'use client';
 
 import { UserNav } from '@/components/user-nav';
@@ -13,7 +12,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
-import { Menu, PlusCircle } from 'lucide-react';
+import { Menu } from 'lucide-react';
+import { AddTransactionDialog } from './add-transaction-dialog';
 
 export function Header() {
   return (
@@ -36,17 +36,17 @@ export function Header() {
         </div>
       </div>
 
-      <div className="flex-1" />
+      <div className="hidden md:flex md:flex-1">
+        <MainNav />
+      </div>
 
-       <div className="flex items-center gap-4">
-        <Button variant="secondary">
-          <PlusCircle className="me-2" />
-          إضافة معاملة
-        </Button>
+
+       <div className="flex flex-1 items-center justify-end gap-4">
+        <AddTransactionDialog />
         <UserNav />
         <Sheet>
             <SheetTrigger asChild>
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" className="md:hidden">
                     <Menu />
                     <span className="sr-only">فتح القائمة</span>
                 </Button>
