@@ -23,14 +23,12 @@ import {
 } from '@/components/ui/form';
 import {
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
   sendPasswordResetEmail,
   type AuthError,
 } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useFirestore } from '@/firebase';
-import { doc, setDoc } from 'firebase/firestore';
-import type { User } from '@/lib/types';
+import { useAuth } from '@/firebase';
+import { Logo } from '@/components/icons';
 
 
 const formSchema = z.object({
@@ -43,7 +41,6 @@ type FormValues = z.infer<typeof formSchema>;
 export default function LoginPage() {
   const { toast } = useToast();
   const auth = useAuth();
-  const firestore = useFirestore();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -87,7 +84,7 @@ export default function LoginPage() {
 
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
-    if (!auth || !firestore) {
+    if (!auth) {
       toast({
         variant: 'destructive',
         title: 'فشل تهيئة Firebase',
@@ -104,45 +101,11 @@ export default function LoginPage() {
     } catch (error) {
         const signInError = error as AuthError;
         
-        if (signInError.code === 'auth/user-not-found') {
-            // User does not exist, let's create it.
-            try {
-                const userCredential = await createUserWithEmailAndPassword(auth, email, data.password);
-                const newUser = userCredential.user;
-
-                // Determine the role based on the email
-                const role = email.toLowerCase() === 'admin@muamalat.app' ? 'admin' : 'merchant';
-                
-                // Create user profile document in /users collection
-                const userDocRef = doc(firestore, 'users', newUser.uid);
-                const userData: User = {
-                    id: newUser.uid,
-                    name: data.username, // Use username as initial name
-                    email: newUser.email!,
-                    role: role,
-                    status: 'active',
-                };
-                await setDoc(userDocRef, userData);
-                
-                toast({
-                  title: 'تم إنشاء الحساب بنجاح!',
-                  description: `مرحباً بك في مدير المعاملات. دورك هو: ${role}.`,
-                });
-
-            } catch (creationError) {
-                const creationAuthError = creationError as AuthError;
-                toast({
-                    variant: 'destructive',
-                    title: 'فشل إنشاء الحساب',
-                    description: creationAuthError.message || 'حدث خطأ أثناء محاولة إنشاء حسابك.',
-                });
-            }
-            return;
-        }
-
-        // Handle other sign-in errors
         let message = 'حدث خطأ غير متوقع.';
         switch (signInError.code) {
+            case 'auth/user-not-found':
+                message = 'لم يتم العثور على حساب بهذا الاسم.';
+                break;
             case 'auth/wrong-password':
             case 'auth/invalid-credential':
               message = 'كلمة المرور التي أدخلتها غير صحيحة.';
@@ -166,12 +129,18 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+      <div className="mb-8 flex items-center gap-4 text-primary">
+          <Logo className="size-12" />
+          <h1 className="font-headline text-4xl font-bold tracking-tight">
+            مدير المعاملات
+          </h1>
+      </div>
       <Card className="mx-auto w-full max-w-sm">
         <CardHeader>
           <CardTitle className="text-2xl">تسجيل الدخول</CardTitle>
           <CardDescription>
-            أدخل اسم المستخدم وكلمة المرور للوصول إلى حسابك. إذا لم يكن لديك حساب، سيتم إنشاء حساب جديد لك.
+            أدخل اسم المستخدم وكلمة المرور للوصول إلى حسابك.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -215,7 +184,7 @@ export default function LoginPage() {
                 )}
               />
               <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? 'جارِ المعالجة...' : 'تسجيل الدخول أو إنشاء حساب'}
+                {form.formState.isSubmitting ? 'جارِ المعالجة...' : 'تسجيل الدخول'}
               </Button>
             </form>
           </Form>
