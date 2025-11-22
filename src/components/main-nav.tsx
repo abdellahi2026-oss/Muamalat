@@ -107,6 +107,16 @@ export function MainNav() {
           <CreditCard className="h-4 w-4" />
           المعاملات
         </Link>
+         <Link
+            href="/settings"
+            className={cn(
+                'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary',
+                pathname === '/settings' && 'bg-muted text-primary'
+            )}
+        >
+            <Settings className="h-4 w-4" />
+            الإعدادات
+        </Link>
       </nav>
 
       {/* Desktop Nav */}
@@ -158,9 +168,16 @@ export function MainNav() {
         >
           المعاملات
         </Link>
+         <Link
+          href="/settings"
+          className={cn(
+            'transition-colors hover:text-primary-foreground/80',
+            pathname === '/settings' ? 'text-primary-foreground' : 'text-primary-foreground/60'
+          )}
+        >
+          الإعدادات
+        </Link>
       </nav>
     </>
   );
 }
-
-    
