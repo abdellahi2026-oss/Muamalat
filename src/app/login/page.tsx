@@ -58,10 +58,8 @@ export default function LoginPage() {
       let email;
 
       if (data.username === 'admin') {
-        // Special handling for the admin user
         email = 'admin@muamalat.app';
       } else {
-        // For other users, find their email from Firestore
         const usersRef = collection(firestore, 'users');
         const q = query(usersRef, where('username', '==', data.username));
         const querySnapshot = await getDocs(q);
@@ -73,13 +71,12 @@ export default function LoginPage() {
         const userDoc = querySnapshot.docs[0];
         const userData = userDoc.data();
         email = userData.email;
+        
+        if (!email) {
+          throw new Error('Email not found for this user.');
+        }
       }
 
-      if (!email) {
-        throw new Error('Email not found for this user.');
-      }
-
-      // 3. Sign in with email and password
       await signInWithEmailAndPassword(auth, email, data.password);
       toast({
         title: 'تم تسجيل الدخول بنجاح!',
@@ -95,6 +92,7 @@ export default function LoginPage() {
           case 'auth/user-not-found':
           case 'auth/wrong-password':
           case 'auth/invalid-credential':
+          case 'auth/invalid-email':
             message = 'اسم المستخدم أو كلمة المرور غير صحيحة.';
             break;
           case 'auth/too-many-requests':
@@ -104,7 +102,7 @@ export default function LoginPage() {
             message = 'حدث خطأ غير معروف أثناء تسجيل الدخول.';
             break;
         }
-      } else if (error instanceof Error && error.message === 'User not found') {
+      } else if (error instanceof Error && (error.message === 'User not found' || error.message === 'Email not found for this user.')) {
           message = 'اسم المستخدم أو كلمة المرور غير صحيحة.';
       }
       
