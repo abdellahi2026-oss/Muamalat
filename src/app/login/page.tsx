@@ -27,8 +27,10 @@ import {
   type AuthError,
 } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { Logo } from '@/components/icons';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import type { User } from '@/lib/types';
 
 
 const formSchema = z.object({
@@ -41,6 +43,7 @@ type FormValues = z.infer<typeof formSchema>;
 export default function LoginPage() {
   const { toast } = useToast();
   const auth = useAuth();
+  const firestore = useFirestore();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -84,7 +87,7 @@ export default function LoginPage() {
 
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
-    if (!auth) {
+    if (!auth || !firestore) {
       toast({
         variant: 'destructive',
         title: 'فشل تهيئة Firebase',
@@ -96,7 +99,23 @@ export default function LoginPage() {
     const email = data.username.includes('@') ? data.username : `${data.username}@muamalat.app`;
 
     try {
-        await signInWithEmailAndPassword(auth, email, data.password);
+        const userCredential = await signInWithEmailAndPassword(auth, email, data.password);
+        const user = userCredential.user;
+
+        // Ensure user document exists in Firestore with the correct role
+        const userDocRef = doc(firestore, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (!userDoc.exists()) {
+            const newUser: User = {
+                id: user.uid,
+                name: user.displayName || data.username,
+                email: user.email!,
+                role: email === 'admin@muamalat.app' ? 'admin' : 'merchant',
+                status: 'active',
+            };
+            await setDoc(userDocRef, newUser);
+        }
         // Auth state change will handle the redirect.
     } catch (error) {
         const signInError = error as AuthError;
@@ -104,8 +123,6 @@ export default function LoginPage() {
         let message = 'حدث خطأ غير متوقع.';
         switch (signInError.code) {
             case 'auth/user-not-found':
-                message = 'لم يتم العثور على حساب بهذا الاسم.';
-                break;
             case 'auth/wrong-password':
             case 'auth/invalid-credential':
               message = 'كلمة المرور التي أدخلتها غير صحيحة.';
