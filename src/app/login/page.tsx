@@ -76,7 +76,7 @@ export default function LoginPage() {
             case 'auth/user-not-found':
             case 'auth/wrong-password':
             case 'auth/invalid-credential':
-              message = 'اسم المستخدم أو كلمة المرور غير صحيحة.';
+              message = 'mot de passe ou username incorrecte';
               break;
             case 'auth/too-many-requests':
               message = 'تم حظر الوصول مؤقتًا بسبب كثرة محاولات تسجيل الدخول الفاشلة.';
@@ -85,7 +85,7 @@ export default function LoginPage() {
               message = 'فشل الاتصال بالشبكة. يرجى التحقق من اتصالك بالإنترنت.';
               break;
             default:
-              message = 'اسم المستخدم أو كلمة المرور غير صحيحة.';
+              message = 'mot de passe ou username incorrecte';
               break;
           }
         }
