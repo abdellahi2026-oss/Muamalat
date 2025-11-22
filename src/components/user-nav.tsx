@@ -12,26 +12,37 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { LogOut, UserCircle, Settings } from 'lucide-react';
+import { LogOut, UserCircle, Settings, Users } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import Link from 'next/link';
 import { Skeleton } from './ui/skeleton';
-import { useAuth } from '@/firebase';
+import { useAuth, useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { useFirebase } from '@/firebase/provider';
+import { doc } from 'firebase/firestore';
+import type { User } from '@/lib/types';
+
 
 export function UserNav() {
   const auth = useAuth();
   const router = useRouter();
-  const { user, isUserLoading } = useFirebase();
+  const { user, firestore, isUserLoading } = useFirebase();
+
+  const userDocRef = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [user, firestore]);
+  
+  const { data: userData, isLoading: isUserDocLoading } = useDoc<User>(userDocRef);
 
   const handleLogout = async () => {
     if (!auth) return;
     await signOut(auth);
     router.push('/login');
   };
+  
+  const isLoading = isUserLoading || isUserDocLoading;
 
-  if (isUserLoading) {
+  if (isLoading) {
     return <Skeleton className="h-10 w-10 rounded-full" />;
   }
 
@@ -45,6 +56,7 @@ export function UserNav() {
 
   const displayName = user.displayName || user.email;
   const displayEmail = user.email;
+  const isAdmin = userData?.role === 'admin';
 
 
   return (
@@ -75,6 +87,14 @@ export function UserNav() {
                     <span>الإعدادات</span>
                 </Link>
             </DropdownMenuItem>
+             {isAdmin && (
+                <DropdownMenuItem asChild>
+                    <Link href="/users">
+                        <Users className="me-2 h-4 w-4" />
+                        <span>إدارة المستخدمين</span>
+                    </Link>
+                </DropdownMenuItem>
+            )}
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout}>

@@ -114,18 +114,6 @@ export function MainNav() {
           <CreditCard className="h-4 w-4" />
           المعاملات
         </Link>
-        {isAdmin && (
-            <Link
-            href="/users"
-            className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary',
-                pathname === '/users' && 'bg-muted text-primary'
-            )}
-            >
-            <Users className="h-4 w-4" />
-            المستخدمون
-            </Link>
-        )}
       </nav>
 
       {/* Desktop Nav */}
@@ -168,17 +156,6 @@ export function MainNav() {
         >
           المعاملات
         </Link>
-        {isAdmin && (
-          <Link
-            href="/users"
-            className={cn(
-              'transition-colors hover:text-primary-foreground/80',
-              pathname === '/users' ? 'text-primary-foreground' : 'text-primary-foreground/60'
-            )}
-          >
-            المستخدمون
-          </Link>
-        )}
       </nav>
     </>
   );
