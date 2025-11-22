@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/form';
 import {
   signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   type AuthError,
 } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -61,13 +62,12 @@ export default function LoginPage() {
       }
 
       let email: string;
+      const isAdmin = data.username.toLowerCase() === 'admin';
 
-      // Handle admin login directly
-      if (data.username.toLowerCase() === 'admin') {
+      if (isAdmin) {
         email = 'admin@muamalat.app';
       } else {
-        // For other users, find their email from Firestore
-        const usersRef = collection(firestore, 'users');
+        const usersRef = collection(firestore, 'clients');
         const q = query(usersRef, where('username', '==', data.username));
         const querySnapshot = await getDocs(q);
 
@@ -102,9 +102,33 @@ export default function LoginPage() {
       router.push('/');
 
     } catch (error) {
+      const firebaseError = error as AuthError;
+      
+      // Handle admin account creation if it doesn't exist
+      if (data.username.toLowerCase() === 'admin' && firebaseError.code === 'auth/user-not-found') {
+        try {
+          const email = 'admin@muamalat.app';
+          await createUserWithEmailAndPassword(auth, email, data.password);
+          toast({
+            title: 'تم إنشاء حساب المدير بنجاح!',
+            description: 'تم إنشاء حساب المدير. جارِ تسجيل الدخول...',
+          });
+          // Try signing in again after creation
+          await signInWithEmailAndPassword(auth, email, data.password);
+          router.push('/');
+          return;
+        } catch (creationError) {
+           toast({
+            variant: 'destructive',
+            title: 'فشل في إنشاء حساب المدير',
+            description: 'لم نتمكن من إنشاء حساب المدير. يرجى المحاولة مرة أخرى.',
+          });
+          return;
+        }
+      }
+
       console.error("Login Error:", error);
       let message = 'حدث خطأ غير متوقع.';
-      const firebaseError = error as AuthError;
 
       if (firebaseError.code) {
         switch (firebaseError.code) {
