@@ -27,24 +27,24 @@ export default function CurrentTransactionsPage() {
   const { user } = useUser();
 
   const murabahaQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user?.uid) return null;
     return query(collectionGroup(firestore, 'murabahaContracts'), where('clientId', '==', user.uid));
-  }, [firestore, user]);
+  }, [firestore, user?.uid]);
 
   const mudarabahQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user?.uid) return null;
     return query(collectionGroup(firestore, 'mudarabahContracts'), where('clientId', '==', user.uid));
-  }, [firestore, user]);
+  }, [firestore, user?.uid]);
   
   const musharakahQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user?.uid) return null;
     return query(collectionGroup(firestore, 'musharakahContracts'), where('partnerIds', 'array-contains', user.uid));
-  }, [firestore, user]);
+  }, [firestore, user?.uid]);
 
   const wakalahQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user?.uid) return null;
     return query(collectionGroup(firestore, 'wakalahContracts'), where('clientId', '==', user.uid));
-  }, [firestore, user]);
+  }, [firestore, user?.uid]);
 
   const { data: murabahaContracts, isLoading: loadingMurabaha } = useCollection<MurabahaContract>(murabahaQuery);
   const { data: mudarabahContracts, isLoading: loadingMudarabah } = useCollection<MudarabahContract>(mudarabahQuery);
