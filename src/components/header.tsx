@@ -39,7 +39,7 @@ export function Header() {
       <div className="flex-1" />
 
        <div className="flex items-center gap-4">
-        <Button variant="outline" className="text-primary-foreground border-primary-foreground hover:bg-primary/80">
+        <Button variant="secondary">
           <PlusCircle className="me-2" />
           إضافة معاملة
         </Button>
