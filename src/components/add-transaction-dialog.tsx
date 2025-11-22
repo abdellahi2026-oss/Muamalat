@@ -70,6 +70,10 @@ export function AddTransactionDialog() {
     defaultValues: {
       clientName: '',
       goods: '',
+      purchasePrice: 0,
+      sellingPrice: 0,
+      startDate: undefined,
+      endDate: undefined,
     },
   });
 
