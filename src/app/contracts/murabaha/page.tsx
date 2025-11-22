@@ -21,7 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import type { MurabahaContract as MurabahaContractType } from '@/lib/types';
 import { format } from 'date-fns';
 import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collectionGroup, query, where } from 'firebase/firestore';
 
 export default function MurabahaPage() {
   const firestore = useFirestore();
@@ -29,7 +29,7 @@ export default function MurabahaPage() {
 
   const contractsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
-    return collection(firestore, `clients/${user.uid}/murabahaContracts`);
+    return query(collectionGroup(firestore, `murabahaContracts`), where('clientId', '==', user.uid));
   }, [firestore, user]);
 
   const { data: murabahaContracts, isLoading } = useCollection<MurabahaContractType>(contractsQuery);

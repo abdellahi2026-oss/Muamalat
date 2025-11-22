@@ -21,7 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import type { WakalahContract } from '@/lib/types';
 import { format } from 'date-fns';
 import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collectionGroup, query, where } from 'firebase/firestore';
 
 export default function WakalahPage() {
   const firestore = useFirestore();
@@ -29,7 +29,7 @@ export default function WakalahPage() {
 
   const contractsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
-    return collection(firestore, `clients/${user.uid}/wakalahContracts`);
+    return query(collectionGroup(firestore, `wakalahContracts`), where('clientId', '==', user.uid));
   }, [firestore, user]);
 
   const { data: wakalahContracts, isLoading } = useCollection<WakalahContract>(contractsQuery);
