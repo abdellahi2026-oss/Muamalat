@@ -13,9 +13,10 @@ import {
 } from '@/components/ui/dropdown-menu';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { CreditCard, LogOut, Settings, User as UserIcon } from 'lucide-react';
-import { getAuth, signOut } from 'firebase/auth';
+import { signOut } from 'firebase/auth';
 import Link from 'next/link';
 import { Skeleton } from './ui/skeleton';
+import { useAuth } from '@/firebase';
 
 type UserNavProps = {
   user: FirebaseUser | null;
@@ -23,8 +24,8 @@ type UserNavProps = {
 };
 
 export function UserNav({ user, loading }: UserNavProps) {
+  const auth = useAuth();
   const handleLogout = async () => {
-    const auth = getAuth();
     await signOut(auth);
   };
 

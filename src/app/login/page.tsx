@@ -9,7 +9,6 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -23,12 +22,12 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import {
-  getAuth,
   signInWithEmailAndPassword,
   type AuthError,
 } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/firebase';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'الرجاء إدخال بريد إلكتروني صالح.' }),
@@ -40,6 +39,7 @@ type FormValues = z.infer<typeof formSchema>;
 export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
+  const auth = useAuth();
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -49,7 +49,6 @@ export default function LoginPage() {
   });
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
-    const auth = getAuth();
     try {
       await signInWithEmailAndPassword(auth, data.email, data.password);
       toast({

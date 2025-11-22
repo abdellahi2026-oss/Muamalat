@@ -9,7 +9,6 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -23,13 +22,13 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import {
-  getAuth,
   createUserWithEmailAndPassword,
   updateProfile,
   type AuthError,
 } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/firebase';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'يجب أن يكون الاسم من حرفين على الأقل.' }),
@@ -42,6 +41,7 @@ type FormValues = z.infer<typeof formSchema>;
 export default function SignupPage() {
   const { toast } = useToast();
   const router = useRouter();
+  const auth = useAuth();
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -52,7 +52,6 @@ export default function SignupPage() {
   });
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
-    const auth = getAuth();
     try {
       const userCredential = await createUserWithEmailAndPassword(
         auth,
