@@ -1,0 +1,126 @@
+import { AnyContract, CommodityCard, User } from './types';
+import { PlaceHolderImages } from './placeholder-images';
+
+const userAvatar = PlaceHolderImages.find(img => img.id === 'user-avatar');
+
+export const userData: User = {
+  name: 'أحمد محمود',
+  email: 'ahmed.mahmoud@example.com',
+  avatar: userAvatar?.imageUrl || 'https://picsum.photos/seed/user-avatar/100/100',
+};
+
+export const allContracts: AnyContract[] = [
+  {
+    id: 'M001',
+    type: 'murabaha',
+    clientName: 'شركة البناء الحديث',
+    goods: 'أسمنت',
+    units: 500,
+    price: 150,
+    amount: 75000,
+    paymentMethod: 'أقساط شهرية',
+    startDate: '2024-05-01',
+    endDate: '2024-11-01',
+    status: 'active',
+  },
+  {
+    id: 'D001',
+    type: 'mudarabah',
+    clientName: 'صندوق الاستثمار العقاري',
+    capital: 500000,
+    amount: 500000,
+    profitSharingRatio: { investor: 60, manager: 40 },
+    investmentArea: 'تطوير عقاري',
+    startDate: '2024-01-15',
+    endDate: '2025-01-15',
+    status: 'active',
+  },
+  {
+    id: 'S001',
+    type: 'musharakah',
+    clientName: 'مشروع المزارع العضوية',
+    amount: 200000,
+    partnerContributions: [
+      { partner: 'شريك أ', amount: 100000 },
+      { partner: 'شريك ب', amount: 100000 },
+    ],
+    ownershipPercentages: [
+      { partner: 'شريك أ', percentage: 50 },
+      { partner: 'شريك ب', percentage: 50 },
+    ],
+    profitDistribution: 'بالتساوي',
+    startDate: '2024-03-01',
+    endDate: '2024-09-01',
+    status: 'completed',
+  },
+  {
+    id: 'W001',
+    type: 'wakalah',
+    clientName: 'مؤسسة التجارة الدولية',
+    agentName: 'وكيل شحن لوجستي',
+    agencyType: 'شراء بضائع',
+    duration: '6 أشهر',
+    amount: 10000,
+    feeStructure: '5% من قيمة المشتريات',
+    startDate: '2024-06-01',
+    endDate: '2024-12-01',
+    status: 'active',
+  },
+  {
+    id: 'M002',
+    type: 'murabaha',
+    clientName: 'مصنع الأثاث الفاخر',
+    goods: 'خشب زان',
+    units: 100,
+    price: 800,
+    amount: 80000,
+    paymentMethod: 'دفعة واحدة',
+    startDate: '2024-04-20',
+    endDate: '2024-07-20',
+    status: 'active',
+  },
+  {
+    id: 'M003',
+    type: 'murabaha',
+    clientName: 'شركة التكنولوجيا المتقدمة',
+    goods: 'أجهزة حاسوب',
+    units: 50,
+    price: 3000,
+    amount: 150000,
+    paymentMethod: 'أقساط ربع سنوية',
+    startDate: '2023-12-01',
+    endDate: '2024-06-01',
+    status: 'overdue',
+  },
+];
+
+export const commodityCards: CommodityCard[] = [
+    {
+      id: 'C001',
+      cardNumber: '1234-5678-9012-3456',
+      nominalValue: 10000,
+      issuingBody: 'بنك البركة',
+      status: 'available',
+    },
+    {
+      id: 'C002',
+      cardNumber: '2345-6789-0123-4567',
+      nominalValue: 50000,
+      issuingBody: 'مصرف الراجحي',
+      status: 'in-use',
+    },
+    {
+      id: 'C003',
+      cardNumber: '3456-7890-1234-5678',
+      nominalValue: 25000,
+      issuingBody: 'بنك دبي الإسلامي',
+      status: 'available',
+    },
+    {
+      id: 'C004',
+      cardNumber: '4567-8901-2345-6789',
+      nominalValue: 100000,
+      issuingBody: 'بنك أبوظبي الإسلامي',
+      status: 'expired',
+    },
+];
