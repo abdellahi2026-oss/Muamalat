@@ -83,8 +83,7 @@ export function AddTransactionDialog() {
 
   const purchasePrice = form.watch('purchasePrice');
   const sellingPrice = form.watch('sellingPrice');
-  const profit =
-    sellingPrice > 0 && purchasePrice > 0 ? sellingPrice - purchasePrice : 0;
+  const profit = sellingPrice - purchasePrice;
 
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
@@ -198,7 +197,7 @@ export function AddTransactionDialog() {
                 )}
               />
             </div>
-             {profit > 0 && (
+             {purchasePrice > 0 && sellingPrice > 0 && profit > 0 && (
               <div className="rounded-md border bg-muted p-3 text-sm">
                 <span className="text-muted-foreground">الربح: </span>
                 <span className="font-semibold">{formatCurrency(profit)}</span>
