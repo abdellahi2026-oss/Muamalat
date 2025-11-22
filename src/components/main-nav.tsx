@@ -43,15 +43,6 @@ export function MainNav() {
   if (isDesktop) {
     return (
       <nav className="flex items-center space-x-4 lg:space-x-6">
-      <Link
-        href="/"
-        className={cn(
-          'text-sm font-medium transition-colors hover:text-primary-foreground/80',
-          isActive('/') ? 'text-primary-foreground' : 'text-primary-foreground/60'
-        )}
-      >
-        لوحة التحكم
-      </Link>
       <DropdownMenu>
         <DropdownMenuTrigger
           className={cn(
@@ -89,17 +80,6 @@ export function MainNav() {
         )}
       >
         بطاقات السلع
-      </Link>
-      <Link
-        href="/settings"
-        className={cn(
-          'text-sm font-medium transition-colors hover:text-primary-foreground/80',
-          isActive('/settings')
-            ? 'text-primary-foreground'
-            : 'text-primary-foreground/60'
-        )}
-      >
-        الإعدادات
       </Link>
     </nav>
     );
