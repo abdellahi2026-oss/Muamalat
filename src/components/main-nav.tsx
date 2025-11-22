@@ -55,7 +55,7 @@ export function MainNav() {
       <DropdownMenu>
         <DropdownMenuTrigger
           className={cn(
-            'flex items-center text-sm font-medium transition-colors hover:text-primary-foreground/80',
+            'flex items-center text-sm font-medium transition-colors hover:text-primary-foreground/80 lg:ml-6',
             isContractsActive('/contracts')
               ? 'text-primary-foreground'
               : 'text-primary-foreground/60'
