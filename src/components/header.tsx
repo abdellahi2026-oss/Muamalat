@@ -45,7 +45,7 @@ export function Header() {
         >
             <Logo className="size-6" />
         </Button>
-        <div className="flex-col md:flex">
+        <div className="hidden flex-col md:flex">
           <h2 className="font-headline text-lg font-semibold tracking-tight">
             مدير المعاملات
           </h2>
