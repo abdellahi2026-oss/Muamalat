@@ -1,3 +1,4 @@
+
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
@@ -5,6 +6,7 @@ import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar'
 import { MainNav } from '@/components/main-nav';
 import { Header } from '@/components/header';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
+import { AppLayout } from '@/components/app-layout';
 
 export const metadata: Metadata = {
   title: 'Muamalat Manager',
@@ -28,15 +30,7 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <FirebaseClientProvider>
-          <SidebarProvider>
-            <Sidebar side="right" collapsible="icon">
-              <MainNav />
-            </Sidebar>
-            <SidebarInset>
-              <Header />
-              <main className="p-4 sm:p-6 lg:p-8">{children}</main>
-            </SidebarInset>
-          </SidebarProvider>
+          <AppLayout>{children}</AppLayout>
         </FirebaseClientProvider>
         <Toaster />
       </body>
