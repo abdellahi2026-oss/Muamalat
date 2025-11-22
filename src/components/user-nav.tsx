@@ -11,14 +11,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { User as FirebaseUser } from 'firebase/auth';
 import { CreditCard, LogOut, Settings, User as UserIcon } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import Link from 'next/link';
 import { Skeleton } from './ui/skeleton';
 import { useAuth } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { useUser } from '@/firebase';
+import { useUser } from '@/firebase/auth/use-user';
 
 export function UserNav() {
   const auth = useAuth();

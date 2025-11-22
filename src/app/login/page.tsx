@@ -62,9 +62,11 @@ export default function LoginPage() {
 
       let email: string;
 
+      // Handle admin login directly
       if (data.username.toLowerCase() === 'admin') {
         email = 'admin@muamalat.app';
       } else {
+        // For other users, find their email from Firestore
         const usersRef = collection(firestore, 'users');
         const q = query(usersRef, where('username', '==', data.username));
         const querySnapshot = await getDocs(q);
@@ -121,7 +123,7 @@ export default function LoginPage() {
              message = 'فشل العثور على إعدادات Firebase. يرجى التأكد من صحة الإعدادات.';
              break;
           default:
-            message = firebaseError.message || 'حدث خطأ غير متوقع.';
+            message = 'اسم المستخدم أو كلمة المرور غير صحيحة.';
             break;
         }
       }

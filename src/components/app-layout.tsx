@@ -2,7 +2,7 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { useUser } from '@/firebase';
+import { useUser } from '@/firebase/auth/use-user';
 import { useEffect } from 'react';
 import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar';
 import { MainNav } from '@/components/main-nav';
