@@ -40,13 +40,11 @@ import {
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { Calendar } from '@/components/ui/calendar';
 import { collection, addDoc, doc, setDoc } from 'firebase/firestore';
 import { useFirebase, useFirestore } from '@/firebase';
 
-const getFormSchema = (contractType: string) => {
+const getFormSchema = () => {
     const baseSchema = z.object({
-        contractType: z.enum(['murabaha', 'mudarabah', 'musharakah', 'wakalah']),
         clientName: z.string().min(3, { message: 'يجب أن يكون اسم العميل 3 أحرف على الأقل.' }),
         startDate: z.date({ required_error: 'يجب إدخال تاريخ البدء.' }),
         endDate: z.date({ required_error: 'يجب إدخال تاريخ الانتهاء.' }),
@@ -102,7 +100,7 @@ export function AddTransactionDialog() {
   const firestore = useFirestore();
   const { user } = useFirebase();
 
-  const formSchema = getFormSchema(contractType);
+  const formSchema = getFormSchema();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
