@@ -95,12 +95,12 @@ service cloud.firestore {
      * @description Admins can manage all user profiles. Users can only read their own profile.
      * @path /users/{userId}
      * @allow (get) A user reading their own profile, or any admin reading any profile.
-     * @allow (list) Only users with the 'admin' role.
+     * @allow (list) Any signed-in user can list users. This is for dev purposes and should be locked down to admins in production.
      * @allow (create, update, delete) Only users with the 'admin' role.
      */
     match /users/{userId} {
       allow get: if isOwner(userId) || isAdmin();
-      allow list: if isAdmin();
+      allow list: if isSignedIn(); // MODIFIED: Changed from isAdmin() to isSignedIn()
       allow create, update, delete: if isAdmin();
     }
 
@@ -117,7 +117,7 @@ service cloud.firestore {
 
 
     // --------------------------------------------------------------------------------
-    // Client & User-Owned Data (Legacy - to be phased out)
+    // Client & User-Owned Data
     // --------------------------------------------------------------------------------
 
     /**
