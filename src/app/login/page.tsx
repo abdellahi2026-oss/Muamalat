@@ -52,38 +52,57 @@ export default function LoginPage() {
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     try {
       if (!auth || !firestore) {
-        throw new Error('Firebase is not initialized');
+        toast({
+          variant: 'destructive',
+          title: 'فشل تسجيل الدخول',
+          description: 'لم يتم تهيئة Firebase بشكل صحيح.',
+        });
+        return;
       }
 
       let email;
 
+      // Handle admin login directly
       if (data.username === 'admin') {
         email = 'admin@muamalat.app';
       } else {
+        // For other users, find email from Firestore
         const usersRef = collection(firestore, 'users');
         const q = query(usersRef, where('username', '==', data.username));
         const querySnapshot = await getDocs(q);
 
         if (querySnapshot.empty) {
-          throw new Error('User not found');
+          toast({
+            variant: 'destructive',
+            title: 'فشل تسجيل الدخول',
+            description: 'اسم المستخدم أو كلمة المرور غير صحيحة.',
+          });
+          return;
         }
 
         const userDoc = querySnapshot.docs[0];
-        const userData = userDoc.data();
-        email = userData.email;
+        email = userDoc.data().email;
         
         if (!email) {
-          throw new Error('Email not found for this user.');
+           toast({
+            variant: 'destructive',
+            title: 'فشل تسجيل الدخول',
+            description: 'لم يتم العثور على بريد إلكتروني لهذا المستخدم.',
+          });
+          return;
         }
       }
 
       await signInWithEmailAndPassword(auth, email, data.password);
+      
       toast({
         title: 'تم تسجيل الدخول بنجاح!',
         description: 'أهلاً بعودتك.',
       });
       router.push('/');
+
     } catch (error) {
+      console.error("Login Error:", error);
       let message = 'حدث خطأ غير متوقع.';
       const firebaseError = error as AuthError;
 
@@ -92,18 +111,15 @@ export default function LoginPage() {
           case 'auth/user-not-found':
           case 'auth/wrong-password':
           case 'auth/invalid-credential':
-          case 'auth/invalid-email':
             message = 'اسم المستخدم أو كلمة المرور غير صحيحة.';
             break;
           case 'auth/too-many-requests':
             message = 'تم حظر الوصول مؤقتًا بسبب كثرة محاولات تسجيل الدخول الفاشلة.';
             break;
           default:
-            message = 'حدث خطأ غير معروف أثناء تسجيل الدخول.';
+            message = `حدث خطأ: ${firebaseError.message}`;
             break;
         }
-      } else if (error instanceof Error && (error.message === 'User not found' || error.message === 'Email not found for this user.')) {
-          message = 'اسم المستخدم أو كلمة المرور غير صحيحة.';
       }
       
       toast({
