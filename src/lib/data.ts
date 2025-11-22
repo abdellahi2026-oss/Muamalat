@@ -1,12 +1,9 @@
 import { AnyContract, CommodityCard, User } from './types';
-import { PlaceHolderImages } from './placeholder-images';
-
-const userAvatar = PlaceHolderImages.find(img => img.id === 'user-avatar');
 
 export const userData: User = {
   name: 'أحمد محمود',
   email: 'ahmed.mahmoud@example.com',
-  avatar: userAvatar?.imageUrl || 'https://picsum.photos/seed/user-avatar/100/100',
+  avatar: '',
 };
 
 export const allContracts: AnyContract[] = [

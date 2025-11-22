@@ -11,7 +11,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import type { User } from '@/lib/types';
 import { CreditCard, LogOut, Settings, User as UserIcon } from 'lucide-react';
-import Image from 'next/image';
 
 type UserNavProps = {
   user: User;
@@ -23,15 +22,6 @@ export function UserNav({ user }: UserNavProps) {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-10 w-10 rounded-full">
           <Avatar className="h-10 w-10">
-            <AvatarImage asChild src={user.avatar}>
-               <Image
-                  src={user.avatar}
-                  alt={user.name}
-                  width={40}
-                  height={40}
-                  data-ai-hint="person portrait"
-                />
-            </AvatarImage>
             <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
           </Avatar>
         </Button>
