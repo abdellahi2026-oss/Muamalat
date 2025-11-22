@@ -1,3 +1,4 @@
+
 import { AnyContract, CommodityCard, User } from './types';
 
 export const userData: User = {

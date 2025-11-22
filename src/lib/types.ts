@@ -1,3 +1,4 @@
+
 export type ContractStatus = 'active' | 'completed' | 'overdue' | 'archived';
 
 export type User = {
@@ -57,6 +58,4 @@ export type CommodityCard = {
   nominalValue: number;
   issuingBody: string;
   status: 'available' | 'in-use' | 'expired';
-  purchasePrice?: number;
-  sellingPrice?: number;
 };
