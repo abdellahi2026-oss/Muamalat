@@ -37,23 +37,20 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-primary px-4 text-primary-foreground backdrop-blur-sm sm:px-6 lg:px-8">
-      <div className="flex items-center gap-2">
+      <Link href="/" className="flex items-center gap-2" aria-label="Home">
         <Button
           variant="ghost"
           size="icon"
           className="shrink-0"
-          asChild
         >
-          <Link href="/" aria-label="Home">
             <Logo className="size-6" />
-          </Link>
         </Button>
         <div className="flex-col md:flex">
           <h2 className="font-headline text-lg font-semibold tracking-tight">
             مدير المعاملات
           </h2>
         </div>
-      </div>
+      </Link>
 
       <div className="hidden md:flex md:flex-1">
         <MainNav />
