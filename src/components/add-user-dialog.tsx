@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -33,7 +32,7 @@ import { z } from 'zod';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore } from '@/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, collection } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 // Note: We can't actually create a Firebase Auth user from the client-side like this
 // without admin privileges. This dialog will only manage the user's profile in Firestore.
@@ -48,17 +47,20 @@ const formSchema = z.object({
 });
 
 // We need a conditional schema for editing vs creating
-const userFormSchema = formSchema.superRefine((data, ctx) => {
-    if (!data.id && (data.password?.length ?? 0) < 6) {
-        ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: 'كلمة المرور مطلوبة ويجب أن تكون 6 أحرف على الأقل.',
-            path: ['password'],
-        });
-    }
-}).extend({
+const userFormSchema = formSchema
+  .extend({
     id: z.string().optional(), // ID is optional, present only when editing
-});
+  })
+  .superRefine((data, ctx) => {
+    // Password is required and must be at least 6 chars long only when CREATING a new user (no id)
+    if (!data.id && (!data.password || data.password.length < 6)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'كلمة المرور مطلوبة ويجب أن تكون 6 أحرف على الأقل.',
+        path: ['password'],
+      });
+    }
+  });
 
 
 type FormValues = z.infer<typeof userFormSchema>;
@@ -133,7 +135,6 @@ export function AddUserDialog({ isOpen, setIsOpen, editingUser }: AddUserDialogP
             // We'll simulate creating the user doc for the UI.
             // We can't create the auth user here, so we will just create the firestore doc
             // and assume the admin will create the auth user separately.
-            // A truly random ID is not ideal, but we have no auth user to get a UID from.
             const newId = doc(collection(firestore, 'users')).id;
             await setDoc(doc(firestore, 'users', newId), { ...userData, id: newId });
 
