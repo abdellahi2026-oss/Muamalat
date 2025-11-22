@@ -52,8 +52,12 @@ export default function UsersPage() {
   
   const usersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return collection(firestore, 'users');
-  }, [firestore]);
+    // Ensure we only query if the current user is an admin
+    if (currentUserData?.role === 'admin') {
+      return collection(firestore, 'users');
+    }
+    return null;
+  }, [firestore, currentUserData?.role]);
 
   const { data: users, isLoading: areUsersLoading } = useCollection<User>(usersQuery);
 
@@ -117,15 +121,28 @@ export default function UsersPage() {
     }
   };
 
-  const isLoading = isUserLoading || isCurrentUserLoading || areUsersLoading;
+  const isLoading = isUserLoading || isCurrentUserLoading;
 
-  if (isLoading || currentUserData?.role !== 'admin') {
+  // Show loader while checking auth/role, then redirect if not admin.
+  if (isLoading) {
     return (
         <div className="flex justify-center items-center h-64">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
     );
   }
+
+  // After loading, if the user is confirmed not to be an admin, they would have been redirected.
+  // So we can proceed to render the page for the admin.
+  if (currentUserData?.role !== 'admin') {
+      // This is a fallback, the useEffect should handle the redirect.
+      return (
+          <div className="flex justify-center items-center h-64">
+              <p>ليس لديك صلاحية الوصول إلى هذه الصفحة.</p>
+          </div>
+      );
+  }
+
 
   return (
     <div className="space-y-6">
@@ -160,8 +177,8 @@ export default function UsersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading && <TableRow><TableCell colSpan={6} className="text-center">جارِ التحميل...</TableCell></TableRow>}
-              {!isLoading && users?.length === 0 && <TableRow><TableCell colSpan={6} className="text-center">لا يوجد مستخدمون.</TableCell></TableRow>}
+              {areUsersLoading && <TableRow><TableCell colSpan={6} className="text-center">جارِ التحميل...</TableCell></TableRow>}
+              {!areUsersLoading && users?.length === 0 && <TableRow><TableCell colSpan={6} className="text-center">لا يوجد مستخدمون.</TableCell></TableRow>}
               {users?.map((u) => (
                 <TableRow key={u.id}>
                   <TableCell>{u.name}</TableCell>
