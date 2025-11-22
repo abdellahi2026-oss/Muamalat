@@ -1,6 +1,7 @@
 
 'use client';
 
+import { useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -17,14 +18,21 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { allContracts } from '@/lib/data';
-import type { MurabahaContract } from '@/lib/types';
+import type { MurabahaContract as MurabahaContractType } from '@/lib/types';
 import { format } from 'date-fns';
+import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
 
 export default function MurabahaPage() {
-  const murabahaContracts = allContracts.filter(
-    (c) => c.type === 'murabaha'
-  ) as MurabahaContract[];
+  const firestore = useFirestore();
+  const { user } = useUser();
+
+  const contractsQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return query(collection(firestore, `clients/${user.uid}/murabahaContracts`));
+  }, [firestore, user]);
+
+  const { data: murabahaContracts, isLoading } = useCollection<MurabahaContractType>(contractsQuery);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('fr-FR', {
@@ -33,7 +41,7 @@ export default function MurabahaPage() {
     }).format(amount);
   };
 
-  const getStatusBadge = (status: MurabahaContract['status']) => {
+  const getStatusBadge = (status: MurabahaContractType['status']) => {
     switch (status) {
       case 'active':
         return <Badge variant="secondary">نشط</Badge>;
@@ -74,18 +82,20 @@ export default function MurabahaPage() {
                 <TableHead>العميل</TableHead>
                 <TableHead>السلعة</TableHead>
                 <TableHead>الكمية</TableHead>
-                <TableHead>سعر البيع</TableHead>
+                <TableHead>سعر البيع الإجمالي</TableHead>
                 <TableHead>الحالة</TableHead>
                 <TableHead>تاريخ الانتهاء</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {murabahaContracts.map((contract) => (
+              {isLoading && <TableRow><TableCell colSpan={6}>جارِ التحميل...</TableCell></TableRow>}
+              {!isLoading && murabahaContracts?.length === 0 && <TableRow><TableCell colSpan={6}>لا توجد عقود.</TableCell></TableRow>}
+              {murabahaContracts?.map((contract) => (
                 <TableRow key={contract.id}>
                   <TableCell>{contract.clientName}</TableCell>
                   <TableCell>{contract.goods}</TableCell>
                    <TableCell>{contract.units}</TableCell>
-                  <TableCell>{formatCurrency(contract.sellingPrice)}</TableCell>
+                  <TableCell>{formatCurrency(contract.sellingPrice * contract.units)}</TableCell>
                   <TableCell>{getStatusBadge(contract.status)}</TableCell>
                   <TableCell>
                     {format(new Date(contract.endDate), 'dd/MM/yyyy')}

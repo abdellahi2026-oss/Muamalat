@@ -85,10 +85,11 @@ export function AddTransactionDialog() {
     },
   });
 
-  const purchasePrice = form.watch('purchasePrice');
-  const sellingPrice = form.watch('sellingPrice');
-  const profit =
-    purchasePrice > 0 && sellingPrice > 0 ? sellingPrice - purchasePrice : 0;
+  const { units, purchasePrice, sellingPrice } = form.watch();
+  const totalProfit =
+    units > 0 && purchasePrice > 0 && sellingPrice > 0
+      ? (sellingPrice - purchasePrice) * units
+      : 0;
 
   const onSubmit = async (data: FormValues) => {
     if (!firestore || !user) {
@@ -209,7 +210,7 @@ export function AddTransactionDialog() {
                 name="purchasePrice"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>سعر الشراء</FormLabel>
+                    <FormLabel>سعر الشراء للقطعة</FormLabel>
                     <FormControl>
                       <Input type="number" {...field} />
                     </FormControl>
@@ -222,7 +223,7 @@ export function AddTransactionDialog() {
                 name="sellingPrice"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>سعر البيع</FormLabel>
+                    <FormLabel>سعر البيع للقطعة</FormLabel>
                     <FormControl>
                       <Input type="number" {...field} />
                     </FormControl>
@@ -231,10 +232,10 @@ export function AddTransactionDialog() {
                 )}
               />
             </div>
-            {profit > 0 && (
+            {totalProfit > 0 && (
               <div className="rounded-md border bg-muted p-3 text-sm">
-                <span className="text-muted-foreground">الربح: </span>
-                <span className="font-semibold">{formatCurrency(profit)}</span>
+                <span className="text-muted-foreground">الربح الإجمالي: </span>
+                <span className="font-semibold">{formatCurrency(totalProfit)}</span>
               </div>
             )}
             <div className="grid grid-cols-2 gap-4">
