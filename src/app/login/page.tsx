@@ -24,6 +24,7 @@ import {
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   type AuthError,
 } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -51,6 +52,40 @@ export default function LoginPage() {
       password: '',
     },
   });
+
+  const handlePasswordReset = async () => {
+    const username = form.getValues('username');
+    if (!username) {
+        toast({
+            variant: 'destructive',
+            title: 'مطلوب اسم المستخدم',
+            description: 'الرجاء إدخال اسم المستخدم الخاص بك أولاً.',
+        });
+        return;
+    }
+    if (!auth) {
+        toast({ variant: 'destructive', title: 'فشل تهيئة Firebase'});
+        return;
+    }
+
+    const email = username.includes('@') ? username : `${username}@muamalat.app`;
+
+    try {
+        await sendPasswordResetEmail(auth, email);
+        toast({
+            title: 'تم إرسال بريد إعادة التعيين',
+            description: 'إذا كان الحساب موجودًا، فسيتم إرسال بريد إلكتروني لإعادة تعيين كلمة المرور.',
+        });
+    } catch (error) {
+        const resetError = error as AuthError;
+        // Show a generic message to avoid confirming if an email exists or not
+        toast({
+            title: 'تم إرسال بريد إعادة التعيين',
+            description: 'إذا كان الحساب موجودًا، فسيتم إرسال بريد إلكتروني لإعادة تعيين كلمة المرور.',
+        });
+    }
+  };
+
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     if (!auth || !firestore) {
@@ -161,8 +196,15 @@ export default function LoginPage() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <div className="flex items-center">
+                    <div className="flex items-center justify-between">
                       <FormLabel>كلمة المرور</FormLabel>
+                      <button
+                        type="button"
+                        onClick={handlePasswordReset}
+                        className="inline-block text-sm underline"
+                      >
+                        هل نسيت كلمة المرور؟
+                      </button>
                     </div>
                     <FormControl>
                       <Input type="password" {...field} dir="ltr" className="text-left" />
