@@ -84,6 +84,17 @@ export default function DashboardPage() {
 
   const totalContractValue = allContracts.reduce((sum, c) => sum + (c.amount || 0), 0);
 
+  const expectedProfit = useMemo(() => {
+    if (!murabahaContracts) return 0;
+    return murabahaContracts
+      .filter(c => c.status === 'active')
+      .reduce((sum, c) => {
+        const profitPerUnit = (c.sellingPrice || 0) - (c.purchasePrice || 0);
+        const totalProfit = profitPerUnit * (c.units || 0);
+        return sum + totalProfit;
+      }, 0);
+  }, [murabahaContracts]);
+
 
   const overdueContracts = allContracts.filter(
     (c) => c.status === 'overdue'
@@ -198,9 +209,9 @@ export default function DashboardPage() {
             <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(12530)}</div>
+            <div className="text-2xl font-bold">{isLoading ? '...' : formatCurrency(expectedProfit)}</div>
             <p className="text-xs text-muted-foreground">
-              +19% من الشهر الماضي
+              من عقود المرابحة النشطة
             </p>
           </CardContent>
         </Card>
