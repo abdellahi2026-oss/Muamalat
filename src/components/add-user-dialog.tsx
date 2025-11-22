@@ -28,8 +28,10 @@ import { PlusCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore } from '@/firebase';
 import { doc, setDoc } from 'firebase/firestore';
-import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, initializeAuth, indexedDBLocalPersistence } from 'firebase/auth';
 import type { User } from '@/lib/types';
+import { getApp, getApps, initializeApp } from 'firebase/app';
+import { firebaseConfig } from '@/firebase/config';
 
 
 const formSchema = z.object({
@@ -65,12 +67,16 @@ export function AddUserDialog() {
       return;
     }
     
-    // We need a separate auth instance for user creation
-    const auth = getAuth();
+    // Create a temporary, secondary Firebase app instance to get a separate Auth service.
+    // This prevents the new user from being automatically signed in and replacing the admin's session.
+    const secondaryAppName = 'secondary-auth-app-for-user-creation';
+    const secondaryApp = getApps().find(app => app.name === secondaryAppName) || initializeApp(firebaseConfig, secondaryAppName);
+    const secondaryAuth = initializeAuth(secondaryApp, { persistence: indexedDBLocalPersistence });
+
 
     try {
-      // 1. Create user in Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      // 1. Create user in Firebase Auth using the secondary auth instance
+      const userCredential = await createUserWithEmailAndPassword(secondaryAuth, data.email, data.password);
       const user = userCredential.user;
 
       // 2. Create user document in Firestore
@@ -182,3 +188,4 @@ export function AddUserDialog() {
     </Dialog>
   );
 }
+
