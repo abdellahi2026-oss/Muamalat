@@ -34,23 +34,29 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 
-const formSchema = z.object({
-  clientName: z
-    .string()
-    .min(3, { message: 'يجب أن يكون اسم العميل 3 أحرف على الأقل.' }),
-  goods: z
-    .string()
-    .min(2, { message: 'يجب إدخال وصف للسلعة.' }),
-  amount: z.coerce
-    .number()
-    .positive({ message: 'يجب أن يكون المبلغ رقمًا موجبًا.' }),
-  startDate: z.date({
-    required_error: 'يجب إدخال تاريخ البدء.',
-  }),
-  endDate: z.date({
-    required_error: 'يجب إدخال تاريخ الانتهاء.',
-  }),
-});
+const formSchema = z
+  .object({
+    clientName: z
+      .string()
+      .min(3, { message: 'يجب أن يكون اسم العميل 3 أحرف على الأقل.' }),
+    goods: z.string().min(2, { message: 'يجب إدخال وصف للسلعة.' }),
+    purchasePrice: z.coerce
+      .number()
+      .positive({ message: 'يجب أن يكون سعر الشراء رقمًا موجبًا.' }),
+    sellingPrice: z.coerce
+      .number()
+      .positive({ message: 'يجب أن يكون سعر البيع رقمًا موجبًا.' }),
+    startDate: z.date({
+      required_error: 'يجب إدخال تاريخ البدء.',
+    }),
+    endDate: z.date({
+      required_error: 'يجب إدخال تاريخ الانتهاء.',
+    }),
+  })
+  .refine((data) => data.sellingPrice > data.purchasePrice, {
+    message: 'سعر البيع يجب أن يكون أكبر من سعر الشراء.',
+    path: ['sellingPrice'],
+  });
 
 type FormValues = z.infer<typeof formSchema>;
 
@@ -66,6 +72,11 @@ export function AddTransactionDialog() {
       goods: '',
     },
   });
+
+  const purchasePrice = form.watch('purchasePrice');
+  const sellingPrice = form.watch('sellingPrice');
+  const profit =
+    sellingPrice > 0 && purchasePrice > 0 ? sellingPrice - purchasePrice : 0;
 
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
@@ -83,6 +94,14 @@ export function AddTransactionDialog() {
     setOpen(false); // Close the dialog
     form.reset(); // Reset the form
   };
+  
+    const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: 'MRU',
+    }).format(amount);
+  };
+
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -132,10 +151,10 @@ export function AddTransactionDialog() {
             />
             <FormField
               control={form.control}
-              name="amount"
+              name="purchasePrice"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>المبلغ</FormLabel>
+                  <FormLabel>سعر الشراء</FormLabel>
                   <FormControl>
                     <Input type="number" {...field} />
                   </FormControl>
@@ -143,6 +162,25 @@ export function AddTransactionDialog() {
                 </FormItem>
               )}
             />
+            <FormField
+              control={form.control}
+              name="sellingPrice"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>سعر البيع</FormLabel>
+                  <FormControl>
+                    <Input type="number" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             {profit > 0 && (
+              <div className="rounded-md border bg-muted p-3 text-sm">
+                <span className="text-muted-foreground">الربح: </span>
+                <span className="font-semibold">{formatCurrency(profit)}</span>
+              </div>
+            )}
             <FormField
               control={form.control}
               name="startDate"

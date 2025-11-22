@@ -97,7 +97,7 @@ export default function CurrentTransactionsPage() {
                 <TableRow key={contract.id}>
                   <TableCell>{contract.clientName}</TableCell>
                   <TableCell>{getContractTypeArabic(contract.type)}</TableCell>
-                  <TableCell>{formatCurrency(contract.amount)}</TableCell>
+                  <TableCell>{formatCurrency(contract.type === 'murabaha' ? contract.sellingPrice : (contract.type === 'mudarabah' ? contract.capital : contract.amount))}</TableCell>
                   <TableCell>{getStatusBadge(contract.status)}</TableCell>
                   <TableCell>
                     {format(new Date(contract.endDate), 'dd/MM/yyyy')}

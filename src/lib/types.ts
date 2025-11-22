@@ -11,7 +11,6 @@ export type User = {
 export type Contract = {
   id: string;
   clientName: string;
-  amount: number;
   startDate: string;
   endDate: string;
   status: ContractStatus;
@@ -21,7 +20,8 @@ export type MurabahaContract = Contract & {
   type: 'murabaha';
   goods: string;
   units: number;
-  price: number;
+  purchasePrice: number;
+  sellingPrice: number;
   paymentMethod: string;
 };
 
@@ -40,6 +40,7 @@ export type MusharakahContract = Contract & {
   partnerContributions: { partner: string; amount: number }[];
   ownershipPercentages: { partner: string; percentage: number }[];
   profitDistribution: string;
+  amount: number;
 };
 
 export type WakalahContract = Contract & {
@@ -48,6 +49,7 @@ export type WakalahContract = Contract & {
   agencyType: string;
   duration: string;
   feeStructure: string;
+  amount: number;
 };
 
 export type AnyContract = MurabahaContract | MudarabahContract | MusharakahContract | WakalahContract;
