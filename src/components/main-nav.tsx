@@ -6,9 +6,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   FileText,
-  LayoutDashboard,
   CreditCard,
-  Settings,
   ChevronDown,
 } from 'lucide-react';
 import {
@@ -16,21 +14,11 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import { useMediaQuery } from '@/hooks/use-media-query';
-
 
 export function MainNav() {
   const pathname = usePathname();
-  const isDesktop = useMediaQuery("(min-width: 768px)");
-
-  const isActive = (path: string) => pathname === path;
+  
   const isContractsActive = (path: string) => pathname.startsWith(path);
   
   const [contractsOpen, setContractsOpen] = React.useState(
@@ -40,64 +28,8 @@ export function MainNav() {
   const isContractsActiveMobile = (type: string) => pathname === `/contracts/${type}`;
 
 
-  if (isDesktop) {
-    return (
-      <nav className="flex items-center space-x-4 lg:space-x-6">
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          className={cn(
-            'flex items-center text-sm font-medium transition-colors hover:text-primary-foreground/80 lg:ml-6',
-            isContractsActive('/contracts')
-              ? 'text-primary-foreground'
-              : 'text-primary-foreground/60'
-          )}
-        >
-          العقود
-          <ChevronDown className="relative top-[1px] ml-1 h-3 w-3 transition duration-200" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuItem>
-            <Link href="/contracts/murabaha">المرابحة</Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem>
-            <Link href="/contracts/mudarabah">المضاربة</Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem>
-            <Link href="/contracts/musharakah">المشاركة</Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem>
-            <Link href="/contracts/wakalah">الوكالة</Link>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-      <Link
-        href="/commodities"
-        className={cn(
-          'text-sm font-medium transition-colors hover:text-primary-foreground/80',
-          isActive('/commodities')
-            ? 'text-primary-foreground'
-            : 'text-primary-foreground/60'
-        )}
-      >
-        بطاقات السلع
-      </Link>
-    </nav>
-    );
-  }
-
-
   return (
     <nav className="mt-8 flex flex-col space-y-2">
-      <Link
-        href="/"
-        className={cn(
-          'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary',
-           isActive('/') && 'bg-muted text-primary'
-        )}
-      >
-        <LayoutDashboard className="h-4 w-4" />
-        لوحة التحكم
-      </Link>
        <Collapsible open={contractsOpen} onOpenChange={setContractsOpen} className='w-full'>
           <CollapsibleTrigger asChild>
             <button
@@ -148,21 +80,11 @@ export function MainNav() {
         href="/commodities"
          className={cn(
           'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary',
-           isActive('/commodities') && 'bg-muted text-primary'
+           pathname === '/commodities' && 'bg-muted text-primary'
         )}
       >
         <CreditCard className="h-4 w-4" />
         بطاقات السلع
-      </Link>
-      <Link
-        href="/settings"
-         className={cn(
-          'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary',
-           isActive('/settings') && 'bg-muted text-primary'
-        )}
-      >
-        <Settings className="h-4 w-4" />
-        الإعدادات
       </Link>
     </nav>
   );

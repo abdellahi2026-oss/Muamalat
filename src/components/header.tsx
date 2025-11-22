@@ -9,6 +9,8 @@ import { Logo } from './icons';
 import {
   Sheet,
   SheetContent,
+  SheetHeader,
+  SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
 import { Menu } from 'lucide-react';
@@ -34,23 +36,25 @@ export function Header() {
         </div>
       </div>
 
-      <div className="hidden md:flex flex-1 justify-center">
-        <MainNav />
-      </div>
-      <div className="flex-1 md:hidden" />
-       <div className="md:hidden">
+      <div className="flex-1" />
+
+       <div className="flex items-center gap-4">
+        <UserNav />
         <Sheet>
             <SheetTrigger asChild>
                 <Button variant="ghost" size="icon">
                     <Menu />
+                    <span className="sr-only">فتح القائمة</span>
                 </Button>
             </SheetTrigger>
             <SheetContent side="right">
-                <MainNav />
+              <SheetHeader>
+                <SheetTitle>القائمة</SheetTitle>
+              </SheetHeader>
+              <MainNav />
             </SheetContent>
         </Sheet>
       </div>
-      <UserNav />
     </header>
   );
 }
