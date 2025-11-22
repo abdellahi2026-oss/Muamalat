@@ -44,61 +44,52 @@ import { collection, addDoc, doc, setDoc } from 'firebase/firestore';
 import { useFirebase, useFirestore } from '@/firebase';
 import { Calendar } from './ui/calendar';
 
-const getFormSchema = () => {
-    // Each schema is now self-contained and includes all necessary fields, including the discriminator.
-    const murabahaSchema = z.object({
-        contractType: z.literal('murabaha'),
-        clientName: z.string().min(3, { message: 'يجب أن يكون اسم العميل 3 أحرف على الأقل.' }),
-        startDate: z.date({ required_error: 'يجب إدخال تاريخ البدء.' }),
-        endDate: z.date({ required_error: 'يجب إدخال تاريخ الانتهاء.' }),
-        goods: z.string().min(2, { message: 'يجب إدخال وصف للسلعة.' }),
-        units: z.coerce.number().positive({ message: 'يجب أن تكون الكمية رقمًا موجبًا.' }),
-        purchasePrice: z.coerce.number().positive({ message: 'يجب أن يكون سعر الشراء رقمًا موجبًا.' }),
-        sellingPrice: z.coerce.number().positive({ message: 'يجب أن يكون سعر البيع رقمًا موجبًا.' }),
-    }).refine((data) => data.sellingPrice > data.purchasePrice, {
-        message: 'سعر البيع يجب أن يكون أكبر من سعر الشراء.',
-        path: ['sellingPrice'],
-    });
+const baseSchema = z.object({
+  clientName: z.string().min(3, { message: 'يجب أن يكون اسم العميل 3 أحرف على الأقل.' }),
+  startDate: z.date({ required_error: 'يجب إدخال تاريخ البدء.' }),
+  endDate: z.date({ required_error: 'يجب إدخال تاريخ الانتهاء.' }),
+});
 
-    const mudarabahSchema = z.object({
-        contractType: z.literal('mudarabah'),
-        clientName: z.string().min(3, { message: 'يجب أن يكون اسم العميل 3 أحرف على الأقل.' }),
-        startDate: z.date({ required_error: 'يجب إدخال تاريخ البدء.' }),
-        endDate: z.date({ required_error: 'يجب إدخال تاريخ الانتهاء.' }),
-        capital: z.coerce.number().positive({ message: 'يجب أن يكون رأس المال رقمًا موجبًا.' }),
-        profitSharingRatio: z.coerce.number().min(1).max(99, { message: 'يجب أن تكون النسبة بين 1 و 99.' }),
-        investmentArea: z.string().min(3, { message: 'يجب إدخال مجال الاستثمار.' }),
-    });
+const murabahaSchema = baseSchema.extend({
+    contractType: z.literal('murabaha'),
+    goods: z.string().min(2, { message: 'يجب إدخال وصف للسلعة.' }),
+    units: z.coerce.number().positive({ message: 'يجب أن تكون الكمية رقمًا موجبًا.' }),
+    purchasePrice: z.coerce.number().positive({ message: 'يجب أن يكون سعر الشراء رقمًا موجبًا.' }),
+    sellingPrice: z.coerce.number().positive({ message: 'يجب أن يكون سعر البيع رقمًا موجبًا.' }),
+}).refine((data) => data.sellingPrice > data.purchasePrice, {
+    message: 'سعر البيع يجب أن يكون أكبر من سعر الشراء.',
+    path: ['sellingPrice'],
+});
 
-    const musharakahSchema = z.object({
-        contractType: z.literal('musharakah'),
-        clientName: z.string().min(3, { message: 'يجب أن يكون اسم العميل 3 أحرف على الأقل.' }),
-        startDate: z.date({ required_error: 'يجب إدخال تاريخ البدء.' }),
-        endDate: z.date({ required_error: 'يجب إدخال تاريخ الانتهاء.' }),
-        amount: z.coerce.number().positive({ message: 'يجب أن يكون إجمالي المساهمة رقمًا موجبًا.' }),
-        profitDistribution: z.string().min(3, { message: 'يجب توضيح كيفية توزيع الأرباح.' }),
-    });
+const mudarabahSchema = baseSchema.extend({
+    contractType: z.literal('mudarabah'),
+    capital: z.coerce.number().positive({ message: 'يجب أن يكون رأس المال رقمًا موجبًا.' }),
+    profitSharingRatio: z.coerce.number().min(1).max(99, { message: 'يجب أن تكون النسبة بين 1 و 99.' }),
+    investmentArea: z.string().min(3, { message: 'يجب إدخال مجال الاستثمار.' }),
+});
 
-    const wakalahSchema = z.object({
-        contractType: z.literal('wakalah'),
-        clientName: z.string().min(3, { message: 'يجب أن يكون اسم العميل 3 أحرف على الأقل.' }),
-        startDate: z.date({ required_error: 'يجب إدخال تاريخ البدء.' }),
-        endDate: z.date({ required_error: 'يجب إدخال تاريخ الانتهاء.' }),
-        agentName: z.string().min(3, { message: 'يجب أن يكون اسم الوكيل 3 أحرف على الأقل.' }),
-        amount: z.coerce.number().positive({ message: 'يجب أن تكون رسوم الوكالة رقمًا موجبًا.' }),
-        agencyType: z.string().min(3, { message: 'يجب إدخال نوع الوكالة.' }),
-    });
-    
-    return z.discriminatedUnion('contractType', [
-        murabahaSchema,
-        mudarabahSchema,
-        musharakahSchema,
-        wakalahSchema
-    ]);
-};
+const musharakahSchema = baseSchema.extend({
+    contractType: z.literal('musharakah'),
+    amount: z.coerce.number().positive({ message: 'يجب أن يكون إجمالي المساهمة رقمًا موجبًا.' }),
+    profitDistribution: z.string().min(3, { message: 'يجب توضيح كيفية توزيع الأرباح.' }),
+});
+
+const wakalahSchema = baseSchema.extend({
+    contractType: z.literal('wakalah'),
+    agentName: z.string().min(3, { message: 'يجب أن يكون اسم الوكيل 3 أحرف على الأقل.' }),
+    amount: z.coerce.number().positive({ message: 'يجب أن تكون رسوم الوكالة رقمًا موجبًا.' }),
+    agencyType: z.string().min(3, { message: 'يجب إدخال نوع الوكالة.' }),
+});
+
+const formSchema = z.discriminatedUnion('contractType', [
+    murabahaSchema,
+    mudarabahSchema,
+    musharakahSchema,
+    wakalahSchema
+]);
 
 
-type FormValues = z.infer<ReturnType<typeof getFormSchema>>;
+type FormValues = z.infer<typeof formSchema>;
 
 
 export function AddTransactionDialog() {
@@ -107,11 +98,8 @@ export function AddTransactionDialog() {
   const firestore = useFirestore();
   const { user } = useFirebase();
 
-  const formSchema = getFormSchema();
-
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    // Ensure all possible fields have a default value to prevent uncontrolled -> controlled error
     defaultValues: {
       contractType: 'murabaha',
       clientName: '',
@@ -249,26 +237,6 @@ export function AddTransactionDialog() {
     }).format(amount);
   };
 
-  const handleContractTypeChange = (value: string) => {
-    // Reset the form with new defaults for the selected contract type
-    form.reset({
-      ...form.getValues(), // keep existing values if they overlap
-      contractType: value as FormValues['contractType'],
-      // Set specific defaults for the new type
-      goods: '',
-      units: 0,
-      purchasePrice: 0,
-      sellingPrice: 0,
-      capital: 0,
-      profitSharingRatio: 50,
-      investmentArea: '',
-      amount: 0,
-      profitDistribution: '',
-      agentName: '',
-      agencyType: '',
-    });
-  };
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -296,10 +264,7 @@ export function AddTransactionDialog() {
                 render={({ field }) => (
                 <FormItem>
                     <FormLabel>نوع العقد</FormLabel>
-                    <Select onValueChange={(value) => {
-                        field.onChange(value);
-                        handleContractTypeChange(value);
-                    }} value={field.value}>
+                    <Select onValueChange={(value) => field.onChange(value as FormValues['contractType'])} value={field.value}>
                         <FormControl>
                         <SelectTrigger>
                             <SelectValue placeholder="اختر نوع العقد" />
@@ -601,5 +566,3 @@ export function AddTransactionDialog() {
     </Dialog>
   );
 }
-
-    
