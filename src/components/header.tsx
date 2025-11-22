@@ -13,7 +13,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
-import { Menu } from 'lucide-react';
+import { Menu, PlusCircle } from 'lucide-react';
 
 export function Header() {
   return (
@@ -39,6 +39,10 @@ export function Header() {
       <div className="flex-1" />
 
        <div className="flex items-center gap-4">
+        <Button variant="outline" className="text-primary-foreground border-primary-foreground hover:bg-primary/80">
+          <PlusCircle className="me-2" />
+          إضافة معاملة
+        </Button>
         <UserNav />
         <Sheet>
             <SheetTrigger asChild>
