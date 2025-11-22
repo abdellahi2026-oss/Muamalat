@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import type { User } from '@/lib/types';
-import { useCollection, useFirestore, useMemoFirebase, useAuth, useUser } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useDoc, useUser } from '@/firebase';
 import { collection, doc, updateDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
@@ -37,6 +37,13 @@ export default function UsersPage() {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   const { toast } = useToast();
+  
+  const userDocRef = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [user, firestore]);
+  
+  const { data: currentUserData, isLoading: isCurrentUserLoading } = useDoc<User>(userDocRef);
 
   const [updatingUsers, setUpdatingUsers] = useState<string[]>([]);
   
@@ -45,14 +52,21 @@ export default function UsersPage() {
     return collection(firestore, 'users');
   }, [firestore]);
 
-  const { data: users, isLoading } = useCollection<User>(usersQuery);
+  const { data: users, isLoading: areUsersLoading } = useCollection<User>(usersQuery);
+
+  useEffect(() => {
+    const isDataLoading = isUserLoading || isCurrentUserLoading;
+    if (!isDataLoading && currentUserData?.role !== 'admin') {
+      router.push('/');
+    }
+  }, [currentUserData, isUserLoading, isCurrentUserLoading, router]);
 
   const handleUpdateUser = async (userId: string, updates: Partial<User>) => {
     if (!firestore) return;
     setUpdatingUsers(prev => [...prev, userId]);
     try {
-      const userDocRef = doc(firestore, 'users', userId);
-      await updateDoc(userDocRef, updates);
+      const userDocRefToUpdate = doc(firestore, 'users', userId);
+      await updateDoc(userDocRefToUpdate, updates);
       toast({
         title: 'تم تحديث المستخدم بنجاح',
       });
@@ -86,6 +100,15 @@ export default function UsersPage() {
     }
   };
 
+  const isLoading = isUserLoading || isCurrentUserLoading || areUsersLoading;
+
+  if (isLoading || currentUserData?.role !== 'admin') {
+    return (
+        <div className="flex justify-center items-center h-64">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -130,7 +153,7 @@ export default function UsersPage() {
                     ) : (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
+                        <Button variant="ghost" size="icon" disabled={u.id === user?.uid}>
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>

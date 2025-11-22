@@ -115,8 +115,13 @@ export default function LoginPage() {
                 status: 'active',
             };
             await setDoc(userDocRef, newUser);
+        } else {
+            // If doc exists, ensure admin role is set for the admin user, in case it was changed.
+             if (email === 'admin@muamalat.app' && userDoc.data().role !== 'admin') {
+                await setDoc(userDocRef, { role: 'admin' }, { merge: true });
+            }
         }
-        // Auth state change will handle the redirect.
+        // Auth state change will handle the redirect via AppLayout.
     } catch (error) {
         const signInError = error as AuthError;
         

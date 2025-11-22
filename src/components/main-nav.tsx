@@ -23,21 +23,21 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from './ui/button';
-import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
+import { useFirebase, useDoc, useMemoFirebase, useUser } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 
 
 export function MainNav() {
   const pathname = usePathname();
-  const { user, firestore } = useFirebase();
+  const { user, firestore, isUserLoading } = useFirebase();
 
   const userDocRef = useMemoFirebase(() => {
     if (!user || !firestore) return null;
     return doc(firestore, 'users', user.uid);
   }, [user, firestore]);
   
-  const { data: userData } = useDoc<User>(userDocRef);
+  const { data: userData, isLoading: isUserDocLoading } = useDoc<User>(userDocRef);
   
   const isContractsActive = (path: string) => pathname.startsWith(path);
   
@@ -48,6 +48,10 @@ export function MainNav() {
   const isContractsActiveMobile = (type: string) => pathname === `/contracts/${type}`;
 
   const isAdmin = userData?.role === 'admin';
+
+  if (isUserLoading || isUserDocLoading) {
+    return null; // Or a loading skeleton
+  }
 
 
   return (
