@@ -47,7 +47,7 @@ export function Header() {
                     <span className="sr-only">فتح القائمة</span>
                 </Button>
             </SheetTrigger>
-            <SheetContent side="right">
+            <SheetContent side="left">
               <SheetHeader>
                 <SheetTitle>القائمة</SheetTitle>
               </SheetHeader>
