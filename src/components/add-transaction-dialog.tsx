@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -33,6 +34,8 @@ import {
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
+import { collection, addDoc } from 'firebase/firestore';
+import { useAuth, useFirestore, useUser } from '@/firebase';
 
 const formSchema = z
   .object({
@@ -65,17 +68,18 @@ type FormValues = z.infer<typeof formSchema>;
 
 export function AddTransactionDialog() {
   const [open, setOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const firestore = useFirestore();
+  const { user } = useUser();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       clientName: '',
       goods: '',
-      units: 0,
-      purchasePrice: 0,
-      sellingPrice: 0,
+      units: undefined,
+      purchasePrice: undefined,
+      sellingPrice: undefined,
       startDate: undefined,
       endDate: undefined,
     },
@@ -83,32 +87,58 @@ export function AddTransactionDialog() {
 
   const purchasePrice = form.watch('purchasePrice');
   const sellingPrice = form.watch('sellingPrice');
-  const profit = sellingPrice - purchasePrice;
+  const profit =
+    purchasePrice && sellingPrice ? sellingPrice - purchasePrice : 0;
 
   const onSubmit = async (data: FormValues) => {
-    setIsSubmitting(true);
-    console.log('New Murabaha Contract Data:', data);
+    if (!firestore || !user) {
+      toast({
+        variant: 'destructive',
+        title: 'خطأ',
+        description: 'لا يمكن إضافة معاملة بدون تسجيل الدخول.',
+      });
+      return;
+    }
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      const contractData = {
+        ...data,
+        clientId: user.uid,
+        type: 'murabaha',
+        status: 'active',
+        paymentMethod: 'أقساط شهرية', // Or make this a form field
+        startDate: data.startDate.toISOString(),
+        endDate: data.endDate.toISOString(),
+      };
 
-    toast({
-      title: 'تمت إضافة المعاملة بنجاح!',
-      description: `تم إنشاء عقد مرابحة جديد لـ ${data.clientName}.`,
-    });
+      await addDoc(
+        collection(firestore, `clients/${user.uid}/murabahaContracts`),
+        contractData
+      );
 
-    setIsSubmitting(false);
-    setOpen(false); // Close the dialog
-    form.reset(); // Reset the form
+      toast({
+        title: 'تمت إضافة المعاملة بنجاح!',
+        description: `تم إنشاء عقد مرابحة جديد لـ ${data.clientName}.`,
+      });
+
+      setOpen(false); // Close the dialog
+      form.reset(); // Reset the form
+    } catch (error) {
+      console.error('Error adding document: ', error);
+      toast({
+        variant: 'destructive',
+        title: 'حدث خطأ',
+        description: 'لم نتمكن من حفظ المعاملة. يرجى المحاولة مرة أخرى.',
+      });
+    }
   };
-  
-    const formatCurrency = (amount: number) => {
+
+  const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('fr-FR', {
       style: 'currency',
       currency: 'MRU',
     }).format(amount);
   };
-
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -156,7 +186,7 @@ export function AddTransactionDialog() {
                 </FormItem>
               )}
             />
-             <FormField
+            <FormField
               control={form.control}
               name="units"
               render={({ field }) => (
@@ -170,7 +200,7 @@ export function AddTransactionDialog() {
               )}
             />
             <div className="grid grid-cols-2 gap-4">
-               <FormField
+              <FormField
                 control={form.control}
                 name="purchasePrice"
                 render={({ field }) => (
@@ -197,13 +227,13 @@ export function AddTransactionDialog() {
                 )}
               />
             </div>
-             {purchasePrice > 0 && sellingPrice > 0 && profit > 0 && (
+            {purchasePrice && sellingPrice && profit > 0 && (
               <div className="rounded-md border bg-muted p-3 text-sm">
                 <span className="text-muted-foreground">الربح: </span>
                 <span className="font-semibold">{formatCurrency(profit)}</span>
               </div>
             )}
-             <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="startDate"
@@ -221,7 +251,7 @@ export function AddTransactionDialog() {
                             )}
                           >
                             {field.value ? (
-                              format(field.value, 'PPP')
+                              format(field.value, 'dd/MM/yyyy')
                             ) : (
                               <span>اختر تاريخًا</span>
                             )}
@@ -262,7 +292,7 @@ export function AddTransactionDialog() {
                             )}
                           >
                             {field.value ? (
-                              format(field.value, 'PPP')
+                              format(field.value, 'dd/MM/yyyy')
                             ) : (
                               <span>اختر تاريخًا</span>
                             )}
@@ -288,11 +318,13 @@ export function AddTransactionDialog() {
               />
             </div>
             <DialogFooter>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting && (
+              <Button type="submit" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting && (
                   <Loader2 className="me-2 h-4 w-4 animate-spin" />
                 )}
-                {isSubmitting ? 'جارِ الحفظ...' : 'حفظ المعاملة'}
+                {form.formState.isSubmitting
+                  ? 'جارِ الحفظ...'
+                  : 'حفظ المعاملة'}
               </Button>
             </DialogFooter>
           </form>
@@ -301,3 +333,5 @@ export function AddTransactionDialog() {
     </Dialog>
   );
 }
+
+    
