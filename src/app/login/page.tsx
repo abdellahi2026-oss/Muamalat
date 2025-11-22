@@ -55,19 +55,25 @@ export default function LoginPage() {
         throw new Error('Firebase is not initialized');
       }
 
-      // 1. Find user by username
-      const usersRef = collection(firestore, 'users');
-      const q = query(usersRef, where('username', '==', data.username));
-      const querySnapshot = await getDocs(q);
+      let email;
 
-      if (querySnapshot.empty) {
-        throw new Error('User not found');
+      if (data.username === 'admin') {
+        // Special handling for the admin user
+        email = 'admin@muamalat.app';
+      } else {
+        // For other users, find their email from Firestore
+        const usersRef = collection(firestore, 'users');
+        const q = query(usersRef, where('username', '==', data.username));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+          throw new Error('User not found');
+        }
+
+        const userDoc = querySnapshot.docs[0];
+        const userData = userDoc.data();
+        email = userData.email;
       }
-
-      // 2. Get email from user document
-      const userDoc = querySnapshot.docs[0];
-      const userData = userDoc.data();
-      const email = userData.email;
 
       if (!email) {
         throw new Error('Email not found for this user.');
