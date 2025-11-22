@@ -165,7 +165,7 @@ export default function LoginPage() {
                       <FormLabel>كلمة المرور</FormLabel>
                     </div>
                     <FormControl>
-                      <Input type="password" {...field} />
+                      <Input type="password" {...field} dir="ltr" className="text-left" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -181,5 +181,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
-    
