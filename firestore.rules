@@ -13,7 +13,7 @@
  *
  * Key Security Decisions:
  * - Strict Ownership: A user can only access data under their own `/clients/{userId}` path.
- * - Admin-Only User Management: Only users with an `admin` role (verified via a custom claim or a document read) can create, update, or delete documents in the `/users` collection.
+ * - Admin-Only User Management: Only users with an `admin` role (verified via a document read) can create, update, or delete documents in the `/users` collection.
  * - Denormalization for Authorization: To ensure fast and secure rules, authorization data is denormalized.
  *   - Musharakah contracts contain a `partnerIds` array, allowing direct access checks without extra database reads.
  *   - Client-specific contracts contain a `clientId` field, ensuring relational integrity with the parent path.
@@ -43,11 +43,11 @@ service cloud.firestore {
     }
     
     /**
-     * Checks if the requesting user has an 'admin' role via custom claims.
-     * This is the performant way to check for admin status in rules.
+     * Checks if the requesting user has an 'admin' role by reading their user document.
+     * This is used for rules where custom claims are not available or not set.
      */
     function isAdmin() {
-      return isSignedIn() && request.auth.token.admin == true;
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
 
@@ -96,7 +96,8 @@ service cloud.firestore {
      */
     match /users/{userId} {
       allow get: if isOwner(userId) || isAdmin();
-      allow list, create, update, delete: if isAdmin();
+      allow list: if isAdmin();
+      allow create, update, delete: if isAdmin();
     }
 
 
