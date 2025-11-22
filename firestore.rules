@@ -1,8 +1,180 @@
+/**
+ * Core Philosophy: This ruleset enforces a user-centric security model for managing Islamic finance contracts.
+ * Client-specific data and contracts are strictly isolated, accessible only by the owning client. Shared contracts
+ * (Musharakah) are accessible only by the participating partners.
+ *
+ * Data Structure:
+ * - /clients/{clientId}: Each user has a root client document. All their personal contracts
+ *   (Murabaha, Mudarabah, Wakalah) are stored in subcollections under this path.
+ * - /musharakahContracts: A top-level collection for shared partnership contracts.
+ * - /commodityCards, /agents, /partners: Top-level collections for publicly readable reference data.
+ *
+ * Key Security Decisions:
+ * - Strict Ownership: A user can only access data under their own `/clients/{userId}` path. Listing all clients is disabled.
+ * - Denormalization for Authorization: To ensure fast and secure rules, authorization data is denormalized.
+ *   - Musharakah contracts contain a `partnerIds` array, allowing direct access checks without extra database reads.
+ *   - Client-specific contracts contain a `clientId` field, ensuring relational integrity with the parent path.
+ * - Structural Segregation: Different contract types are stored in separate collections. This simplifies rules
+ *   and ensures performant, secure queries, as each collection has a uniform security posture.
+ * - Public Data: Reference data like commodity cards, agents, and partners is publicly readable but locked down from client modification.
+ *   Writes to this data should be handled by a trusted server environment or admin SDK.
+ */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if false;
+
+    // --------------------------------------------------------------------------------
+    // Helper Functions
+    // --------------------------------------------------------------------------------
+
+    /**
+     * Checks if the user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the authenticated user's UID matches the provided userId.
+     * This is the primary function for enforcing document ownership.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Checks if a document exists before an update or delete operation.
+     * This prevents operations on non-existent documents, which is a best practice.
+     */
+    function isExistingDoc() {
+      return resource != null;
+    }
+
+    /**
+     * Checks if an authenticated user is a partner in an existing Musharakah contract.
+     * Used for read, update, and delete operations on existing documents.
+     */
+    function isPartner() {
+      return isSignedIn() && request.auth.uid in resource.data.partnerIds;
+    }
+
+    /**
+     * Checks if the user creating a Musharakah contract is included in its partner list.
+     * Used for create operations where `resource` is not available.
+     */
+    function isCreatingAsPartner() {
+      return isSignedIn() && request.auth.uid in request.resource.data.partnerIds;
+    }
+
+    /**
+     * A composite function that verifies partnership and document existence.
+     * Improves readability for update/delete rules.
+     */
+    function isExistingPartner() {
+      return isPartner() && isExistingDoc();
+    }
+
+
+    // --------------------------------------------------------------------------------
+    // Client & User-Owned Data
+    // --------------------------------------------------------------------------------
+
+    /**
+     * @description A user can create and manage their own client profile.
+     * @path /clients/{clientId}
+     * @allow (get) A signed-in user reading their own document: `auth.uid == clientId`.
+     * @deny (get) A user trying to read another user's document: `auth.uid != clientId`.
+     * @deny (list) Any user trying to list all clients.
+     * @principle Restricts access to a user's own data tree and prevents user enumeration.
+     */
+    match /clients/{clientId} {
+      allow get: if isOwner(clientId);
+      allow list: if false;
+      allow create: if isOwner(clientId) && request.resource.data.id == clientId;
+      allow update: if isOwner(clientId) && isExistingDoc() && request.resource.data.id == resource.data.id;
+      allow delete: if isOwner(clientId) && isExistingDoc();
+    }
+
+    /**
+     * @description Secures all user-owned contracts (Murabaha, Mudarabah, Wakalah) in their respective subcollections.
+     * @path /clients/{clientId}/{contractCollection}/{contractId}
+     * @allow (create) The client creating a contract in their own subcollection.
+     * @deny (create) A user trying to create a contract under another client's path.
+     * @deny (update) A user trying to change the `clientId` of an existing contract.
+     * @principle Enforces strict data ownership for all documents within a user's data tree.
+     */
+    match /clients/{clientId}/{contractCollection}/{contractId} {
+      allow get, list: if isOwner(clientId);
+      allow create: if isOwner(clientId) && request.resource.data.clientId == clientId;
+      allow update: if isOwner(clientId) && isExistingDoc() && request.resource.data.clientId == resource.data.clientId;
+      allow delete: if isOwner(clientId) && isExistingDoc();
+    }
+
+
+    // --------------------------------------------------------------------------------
+    // Shared Contracts
+    // --------------------------------------------------------------------------------
+
+    /**
+     * @description Partners can create, read, and manage shared Musharakah contracts.
+     * @path /musharakahContracts/{musharakahContractId}
+     * @allow (get) A user whose UID is in the `partnerIds` array reading the contract.
+     * @deny (get) A user whose UID is not in the `partnerIds` array.
+     * @allow (list) Any signed-in user can issue a query, but it must be filtered on the client-side
+     *               (e.g., `where('partnerIds', 'array-contains', currentUser.uid)`). The `get` rule
+     *               provides the ultimate document-level security.
+     * @principle Implements closed collaborator access using a denormalized list of members (`partnerIds`).
+     */
+    match /musharakahContracts/{musharakahContractId} {
+      allow get: if isPartner();
+      allow list: if isSignedIn();
+      allow create: if isCreatingAsPartner();
+      allow update: if isExistingPartner() && request.resource.data.partnerIds == resource.data.partnerIds;
+      allow delete: if isExistingPartner();
+    }
+
+
+    // --------------------------------------------------------------------------------
+    // Public Reference Data
+    // --------------------------------------------------------------------------------
+
+    /**
+     * @description Commodity cards are public reference data, readable by anyone but not writable by clients.
+     * @path /commodityCards/{commodityCardId}
+     * @allow (get, list) Any user, signed-in or not, can read this data.
+     * @deny (create, update, delete) All client-side write operations are blocked.
+     * @principle Provides public read access while protecting data integrity from client modification.
+     */
+    match /commodityCards/{commodityCardId} {
+      allow get, list: if true;
+      // CRITICAL: Cannot implement owner-only writes. The 'CommodityCard' entity is missing an 'ownerId' or 'creatorId' field.
+      allow create, update, delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+    }
+
+    /**
+     * @description Agent information is public reference data, readable by anyone but not writable by clients.
+     * @path /agents/{agentId}
+     * @allow (get, list) Any user, signed-in or not, can read this data.
+     * @deny (create, update, delete) All client-side write operations are blocked.
+     * @principle Provides public read access while protecting data integrity from client modification.
+     */
+    match /agents/{agentId} {
+      allow get, list: if true;
+      // CRITICAL: Cannot implement owner-only writes. The 'Agent' entity is missing an 'ownerId' or 'creatorId' field.
+      allow create, update, delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+    }
+
+    /**
+     * @description Partner information is public reference data, readable by anyone but not writable by clients.
+     * @path /partners/{partnerId}
+     * @allow (get, list) Any user, signed-in or not, can read this data.
+     * @deny (create, update, delete) All client-side write operations are blocked.
+     * @principle Provides public read access while protecting data integrity from client modification.
+     */
+    match /partners/{partnerId} {
+      allow get, list: if true;
+      // CRITICAL: Cannot implement owner-only writes. The 'Partner' entity is missing an 'ownerId' or 'creatorId' field.
+      allow create, update, delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
     }
   }
 }

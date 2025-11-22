@@ -1,69 +1,50 @@
-import { getApps, initializeApp, type FirebaseApp } from 'firebase/app';
-import { getAuth, type Auth } from 'firebase/auth';
-import { getFirestore, type Firestore } from 'firebase/firestore';
+'use client';
 
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-export const firebaseConfig = {
-  apiKey: "AIzaSyBKrqohWHpNLcapXi6MiHT-S9UUKPzkWG8",
-  authDomain: "studio-1812474465-c8add.firebaseapp.com",
-  projectId: "studio-1812474465-c8add",
-  storageBucket: "studio-1812474465-c8add.appspot.com",
-  messagingSenderId: "623046393664",
-  appId: "1:623046393664:web:1ce906e7858e03c50a84a5",
-};
+import { firebaseConfig } from '@/firebase/config';
+import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore'
 
+// IMPORTANT: DO NOT MODIFY THIS FUNCTION
+export function initializeFirebase() {
+  if (!getApps().length) {
+    // Important! initializeApp() is called without any arguments because Firebase App Hosting
+    // integrates with the initializeApp() function to provide the environment variables needed to
+    // populate the FirebaseOptions in production. It is critical that we attempt to call initializeApp()
+    // without arguments.
+    let firebaseApp;
+    try {
+      // Attempt to initialize via Firebase App Hosting environment variables
+      firebaseApp = initializeApp();
+    } catch (e) {
+      // Only warn in production because it's normal to use the firebaseConfig to initialize
+      // during development
+      if (process.env.NODE_ENV === "production") {
+        console.warn('Automatic initialization failed. Falling back to firebase config object.', e);
+      }
+      firebaseApp = initializeApp(firebaseConfig);
+    }
 
-import { FirebaseProvider, useFirebase } from './provider';
-import { useUser } from './auth/use-user';
-import { FirebaseClientProvider } from './client-provider';
-
-// This function initializes Firebase and returns the instances of the services.
-// It's designed to be idempotent, meaning it will only initialize the app once.
-function initializeFirebase() {
-  // CRITICAL: Check if the config is loaded.
-  if (!firebaseConfig || !firebaseConfig.apiKey) {
-    throw new Error('FATAL: Firebase config is not defined. Please check your environment setup.');
+    return getSdks(firebaseApp);
   }
 
-  const apps = getApps();
-  let firebaseApp: FirebaseApp;
+  // If already initialized, return the SDKs with the already initialized App
+  return getSdks(getApp());
+}
 
-  if (!apps.length) {
-    firebaseApp = initializeApp(firebaseConfig);
-  } else {
-    firebaseApp = apps[0];
-  }
-
-  const auth = getAuth(firebaseApp);
-  const firestore = getFirestore(firebaseApp);
-
+export function getSdks(firebaseApp: FirebaseApp) {
   return {
     firebaseApp,
-    firestore,
-    auth,
+    auth: getAuth(firebaseApp),
+    firestore: getFirestore(firebaseApp)
   };
 }
 
-
-function useFirebaseApp(): FirebaseApp {
-  return useFirebase().firebaseApp;
-}
-
-function useFirestore(): Firestore {
-  return useFirebase().firestore;
-}
-
-function useAuth(): Auth {
-  return useFirebase().auth;
-}
-
-export {
-  initializeFirebase,
-  FirebaseProvider,
-  FirebaseClientProvider,
-  useUser,
-  useFirebase,
-  useFirebaseApp,
-  useFirestore,
-  useAuth,
-};
+export * from './provider';
+export * from './client-provider';
+export * from './firestore/use-collection';
+export * from './firestore/use-doc';
+export * from './non-blocking-updates';
+export * from './non-blocking-login';
+export * from './errors';
+export * from './error-emitter';
