@@ -26,7 +26,10 @@ import {
   type AuthError,
 } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import type { User } from '@/lib/types';
+
 
 const formSchema = z.object({
   username: z.string().min(3, { message: 'يجب أن يكون اسم المستخدم 3 أحرف على الأقل.' }),
@@ -38,6 +41,8 @@ type FormValues = z.infer<typeof formSchema>;
 export default function LoginPage() {
   const { toast } = useToast();
   const auth = useAuth();
+  const firestore = useFirestore();
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -47,7 +52,7 @@ export default function LoginPage() {
   });
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
-    if (!auth) {
+    if (!auth || !firestore) {
       toast({
         variant: 'destructive',
         title: 'فشل تهيئة Firebase',
@@ -65,10 +70,24 @@ export default function LoginPage() {
       const signInError = error as AuthError;
       
       // If admin user doesn't exist, create it.
-      // The onAuthStateChanged listener in AppLayout will then handle the redirect after creation.
       if (signInError.code === 'auth/user-not-found' && email === 'admin@muamalat.app') {
         try {
-          await createUserWithEmailAndPassword(auth, email, data.password);
+          const userCredential = await createUserWithEmailAndPassword(auth, email, data.password);
+          const adminUser = userCredential.user;
+
+          // After creating the auth user, create their document in Firestore.
+          // In a real app, you would use a Cloud Function to set custom claims.
+          // For now, we'll just create the user document with the 'admin' role.
+          const adminDocRef = doc(firestore, 'users', adminUser.uid);
+          const adminData: User = {
+            id: adminUser.uid,
+            name: 'Admin', // Default name for the first admin
+            email: adminUser.email!,
+            role: 'admin',
+            status: 'active',
+          };
+          await setDoc(adminDocRef, adminData);
+
           // IMPORTANT: Do NOT redirect here. The onAuthStateChanged listener will handle it.
         } catch (creationError) {
            const creationAuthError = creationError as AuthError;

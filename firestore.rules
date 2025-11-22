@@ -43,11 +43,11 @@ service cloud.firestore {
     }
     
     /**
-     * Checks if the requesting user has an 'admin' role.
-     * It fetches the user's profile from the /users collection to check their role.
+     * Checks if the requesting user has an 'admin' role via custom claims.
+     * This is the performant way to check for admin status in rules.
      */
     function isAdmin() {
-        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return isSignedIn() && request.auth.token.admin == true;
     }
 
 
