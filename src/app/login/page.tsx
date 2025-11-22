@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/form';
 import {
   signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   type AuthError,
 } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -51,7 +52,7 @@ export default function LoginPage() {
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     try {
       if (!auth || !firestore) {
-         toast({
+        toast({
           variant: 'destructive',
           title: 'فشل تهيئة Firebase',
           description: 'خدمات Firebase غير متاحة. يرجى المحاولة مرة أخرى.',
@@ -61,8 +62,40 @@ export default function LoginPage() {
 
       const email = 'admin@muamalat.app';
 
-      await signInWithEmailAndPassword(auth, email, data.password);
-      
+      if (data.username === 'admin') {
+        try {
+          // Try to sign in first
+          await signInWithEmailAndPassword(auth, email, data.password);
+        } catch (error) {
+          const signInError = error as AuthError;
+          // If user does not exist, create it
+          if (signInError.code === 'auth/user-not-found' || signInError.code === 'auth/invalid-credential') {
+            try {
+              await createUserWithEmailAndPassword(auth, email, data.password);
+              toast({
+                title: 'تم إنشاء حساب المدير بنجاح!',
+                description: 'تم تسجيل دخولك الآن.',
+              });
+              router.push('/');
+              return; 
+            } catch (creationError) {
+               const createError = creationError as AuthError;
+               toast({
+                variant: 'destructive',
+                title: 'فشل إنشاء حساب المدير',
+                description: createError.message,
+              });
+              return;
+            }
+          }
+          // For other sign-in errors, re-throw to be caught by the outer catch block
+          throw signInError;
+        }
+      } else {
+         // Logic for non-admin users can be added here if needed
+         await signInWithEmailAndPassword(auth, data.username, data.password);
+      }
+
       toast({
         title: 'تم تسجيل الدخول بنجاح!',
         description: 'أهلاً بعودتك.',
@@ -72,7 +105,6 @@ export default function LoginPage() {
     } catch (error) {
       const firebaseError = error as AuthError;
       
-      console.error("Login Error:", firebaseError.code, firebaseError.message);
       let message = 'حدث خطأ غير متوقع.';
 
       if (firebaseError.code) {
@@ -88,9 +120,9 @@ export default function LoginPage() {
           case 'auth/network-request-failed':
             message = 'فشل الاتصال بالشبكة. يرجى التحقق من اتصالك بالإنترنت.';
             break;
-           case 'auth/configuration-not-found':
-             message = 'فشل العثور على إعدادات Firebase. يرجى التأكد من صحة الإعدادات.';
-             break;
+          case 'auth/configuration-not-found':
+            message = 'فشل العثور على إعدادات Firebase. يرجى التأكد من صحة الإعدادات.';
+            break;
           default:
             message = 'اسم المستخدم أو كلمة المرور غير صحيحة.';
             break;
