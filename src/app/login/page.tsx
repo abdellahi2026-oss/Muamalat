@@ -100,7 +100,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-10rem)] items-center justify-center">
+    <div className="flex min-h-screen items-center justify-center bg-background">
       <Card className="mx-auto w-full max-w-sm">
         <CardHeader>
           <CardTitle className="text-2xl">تسجيل الدخول</CardTitle>
@@ -119,7 +119,6 @@ export default function LoginPage() {
                     <FormLabel>اسم المستخدم</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="admin"
                         {...field}
                       />
                     </FormControl>
