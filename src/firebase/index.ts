@@ -16,10 +16,7 @@ function initializeFirebase() {
   if (typeof window !== 'undefined') {
     const apps = getApps();
     if (!apps.length) {
-      if (
-        !firebaseConfig.apiKey ||
-        firebaseConfig.apiKey === 'undefined'
-      ) {
+      if (!firebaseConfig.apiKey) {
         console.error('Firebase API key is not defined. Please check your environment variables.');
         // Return dummy objects to avoid crashing the app
         return {
