@@ -73,6 +73,7 @@ export default function MurabahaPage() {
               <TableRow>
                 <TableHead>العميل</TableHead>
                 <TableHead>السلعة</TableHead>
+                <TableHead>الكمية</TableHead>
                 <TableHead>سعر البيع</TableHead>
                 <TableHead>الحالة</TableHead>
                 <TableHead>تاريخ الانتهاء</TableHead>
@@ -83,6 +84,7 @@ export default function MurabahaPage() {
                 <TableRow key={contract.id}>
                   <TableCell>{contract.clientName}</TableCell>
                   <TableCell>{contract.goods}</TableCell>
+                   <TableCell>{contract.units}</TableCell>
                   <TableCell>{formatCurrency(contract.sellingPrice)}</TableCell>
                   <TableCell>{getStatusBadge(contract.status)}</TableCell>
                   <TableCell>

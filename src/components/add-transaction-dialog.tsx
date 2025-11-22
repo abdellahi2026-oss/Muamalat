@@ -40,6 +40,9 @@ const formSchema = z
       .string()
       .min(3, { message: 'يجب أن يكون اسم العميل 3 أحرف على الأقل.' }),
     goods: z.string().min(2, { message: 'يجب إدخال وصف للسلعة.' }),
+    units: z.coerce
+      .number()
+      .positive({ message: 'يجب أن تكون الكمية رقمًا موجبًا.' }),
     purchasePrice: z.coerce
       .number()
       .positive({ message: 'يجب أن يكون سعر الشراء رقمًا موجبًا.' }),
@@ -70,6 +73,7 @@ export function AddTransactionDialog() {
     defaultValues: {
       clientName: '',
       goods: '',
+      units: 0,
       purchasePrice: 0,
       sellingPrice: 0,
       startDate: undefined,
@@ -148,6 +152,19 @@ export function AddTransactionDialog() {
                   <FormLabel>السلعة</FormLabel>
                   <FormControl>
                     <Input placeholder="مثال: أسمنت، حديد..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="units"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>الكمية</FormLabel>
+                  <FormControl>
+                    <Input type="number" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
