@@ -8,6 +8,7 @@ export type User = {
   email: string;
   role: 'admin' | 'merchant';
   status: 'active' | 'inactive';
+  lastSignInTime?: string;
 };
 
 export type Contract = {

@@ -32,6 +32,8 @@ import { MoreHorizontal, Loader2, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { AddUserDialog } from '@/components/add-user-dialog';
+import { format, formatDistanceToNow } from 'date-fns';
+import { ar } from 'date-fns/locale';
 
 export default function UsersPage() {
   const firestore = useFirestore();
@@ -101,6 +103,20 @@ export default function UsersPage() {
     }
   };
 
+  const formatLastSignIn = (dateString?: string) => {
+    if (!dateString) return 'لم يسجل دخوله بعد';
+    try {
+        const date = new Date(dateString);
+        // if date is more than a week ago, show full date, otherwise show relative time
+        if (Date.now() - date.getTime() > 7 * 24 * 60 * 60 * 1000) {
+            return format(date, 'd MMMM yyyy', { locale: ar });
+        }
+        return formatDistanceToNow(date, { addSuffix: true, locale: ar });
+    } catch (error) {
+        return 'تاريخ غير صالح';
+    }
+  };
+
   const isLoading = isUserLoading || isCurrentUserLoading || areUsersLoading;
 
   if (isLoading || currentUserData?.role !== 'admin') {
@@ -139,18 +155,20 @@ export default function UsersPage() {
                 <TableHead>البريد الإلكتروني</TableHead>
                 <TableHead>الدور</TableHead>
                 <TableHead>الحالة</TableHead>
+                <TableHead>آخر تسجيل دخول</TableHead>
                 <TableHead className="text-right">إجراءات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading && <TableRow><TableCell colSpan={5} className="text-center">جارِ التحميل...</TableCell></TableRow>}
-              {!isLoading && users?.length === 0 && <TableRow><TableCell colSpan={5} className="text-center">لا يوجد مستخدمون.</TableCell></TableRow>}
+              {isLoading && <TableRow><TableCell colSpan={6} className="text-center">جارِ التحميل...</TableCell></TableRow>}
+              {!isLoading && users?.length === 0 && <TableRow><TableCell colSpan={6} className="text-center">لا يوجد مستخدمون.</TableCell></TableRow>}
               {users?.map((u) => (
                 <TableRow key={u.id}>
                   <TableCell>{u.name}</TableCell>
                   <TableCell>{u.email}</TableCell>
                   <TableCell>{getRoleBadge(u.role)}</TableCell>
                   <TableCell>{getStatusBadge(u.status)}</TableCell>
+                  <TableCell>{formatLastSignIn(u.lastSignInTime)}</TableCell>
                   <TableCell className="text-right">
                     {updatingUsers.includes(u.id) ? (
                         <Loader2 className="h-5 w-5 animate-spin ms-auto" />

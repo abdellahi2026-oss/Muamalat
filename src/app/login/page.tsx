@@ -101,9 +101,11 @@ export default function LoginPage() {
         const userCredential = await signInWithEmailAndPassword(auth, email, data.password);
         const user = userCredential.user;
 
-        // Ensure user document exists in Firestore with the correct role
+        // Ensure user document exists in Firestore and update last sign-in
         const userDocRef = doc(firestore, 'users', user.uid);
         const userDoc = await getDoc(userDocRef);
+        const lastSignInTime = user.metadata.lastSignInTime || new Date().toISOString();
+
 
         if (!userDoc.exists()) {
             const newUser: User = {
@@ -112,13 +114,18 @@ export default function LoginPage() {
                 email: user.email!,
                 role: email === 'admin@muamalat.app' ? 'admin' : 'merchant',
                 status: 'active',
+                lastSignInTime: lastSignInTime,
             };
             await setDoc(userDocRef, newUser);
         } else {
-            // If doc exists, ensure admin role is set for the admin user, in case it was changed.
+             const updates: Partial<User> = {
+                lastSignInTime: lastSignInTime,
+             };
+             // Ensure admin role is set for the admin user, in case it was changed.
              if (email === 'admin@muamalat.app' && userDoc.data().role !== 'admin') {
-                await setDoc(userDocRef, { role: 'admin' }, { merge: true });
+                updates.role = 'admin';
             }
+             await setDoc(userDocRef, updates, { merge: true });
         }
         // Auth state change will handle the redirect via AppLayout.
     } catch (error) {

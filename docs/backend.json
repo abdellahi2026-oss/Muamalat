@@ -29,6 +29,11 @@
           "type": "string",
           "description": "The status of the user account.",
           "enum": ["active", "inactive"]
+        },
+        "lastSignInTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The last time the user signed in."
         }
       },
       "required": [
@@ -505,5 +510,3 @@
     ]
   }
 }
-
-    
