@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/form';
 import {
   signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   type AuthError,
 } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -48,61 +49,67 @@ export default function LoginPage() {
   });
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
-    try {
-      if (!auth) {
-        toast({
-          variant: 'destructive',
-          title: 'فشل تهيئة Firebase',
-          description: 'خدمات Firebase غير متاحة. يرجى المحاولة مرة أخرى.',
-        });
-        return;
-      }
-
-      const email = data.username.includes('@') ? data.username : `${data.username}@muamalat.app`;
-
-
-      try {
-        await signInWithEmailAndPassword(auth, email, data.password);
-        toast({
-          title: 'تم تسجيل الدخول بنجاح!',
-          description: 'أهلاً بعودتك.',
-        });
-        router.push('/');
-      } catch (error) {
-        const signInError = error as AuthError;
-        
-        let message = 'حدث خطأ غير متوقع.';
-        if (signInError.code) {
-          switch (signInError.code) {
-            case 'auth/user-not-found':
-            case 'auth/wrong-password':
-            case 'auth/invalid-credential':
-              message = 'mot de passe ou username incorrecte';
-              break;
-            case 'auth/too-many-requests':
-              message = 'تم حظر الوصول مؤقتًا بسبب كثرة محاولات تسجيل الدخول الفاشلة.';
-              break;
-            case 'auth/network-request-failed':
-              message = 'فشل الاتصال بالشبكة. يرجى التحقق من اتصالك بالإنترنت.';
-              break;
-            default:
-              message = 'mot de passe ou username incorrecte';
-              break;
-          }
-        }
-        toast({
-          variant: 'destructive',
-          title: 'فشل تسجيل الدخول',
-          description: message,
-        });
-      }
-
-    } catch (error) {
-      console.error("An unexpected error occurred: ", error);
+    if (!auth) {
       toast({
         variant: 'destructive',
-        title: 'خطأ جسيم',
-        description: 'حدث خطأ غير متوقع بالكامل. يرجى مراجعة وحدة التحكم.',
+        title: 'فشل تهيئة Firebase',
+        description: 'خدمات Firebase غير متاحة. يرجى المحاولة مرة أخرى.',
+      });
+      return;
+    }
+
+    const email = data.username.includes('@') ? data.username : `${data.username}@muamalat.app`;
+
+    try {
+      await signInWithEmailAndPassword(auth, email, data.password);
+      toast({
+        title: 'تم تسجيل الدخول بنجاح!',
+        description: 'أهلاً بعودتك.',
+      });
+      // The AppLayout component will handle the redirection after the user state is updated.
+      // No need for router.push('/') here.
+    } catch (error) {
+      const signInError = error as AuthError;
+      
+      let message = 'حدث خطأ غير متوقع.';
+      if (signInError.code) {
+        switch (signInError.code) {
+          case 'auth/user-not-found':
+          case 'auth/wrong-password':
+          case 'auth/invalid-credential':
+             if (email === 'admin@muamalat.app') {
+                // Try to create the admin user if it doesn't exist
+                try {
+                  await createUserWithEmailAndPassword(auth, email, data.password);
+                   toast({
+                    title: 'تم إنشاء حساب المدير بنجاح!',
+                    description: 'تم تسجيل دخولك كمدير.',
+                  });
+                  // AppLayout will handle redirect
+                  return;
+                } catch (creationError) {
+                   message = 'فشل إنشاء حساب المدير.';
+                }
+
+             } else {
+                message = 'mot de passe ou username incorrecte';
+             }
+            break;
+          case 'auth/too-many-requests':
+            message = 'تم حظر الوصول مؤقتًا بسبب كثرة محاولات تسجيل الدخول الفاشلة.';
+            break;
+          case 'auth/network-request-failed':
+            message = 'فشل الاتصال بالشبكة. يرجى التحقق من اتصالك بالإنترنت.';
+            break;
+          default:
+            message = 'mot de passe ou username incorrecte';
+            break;
+        }
+      }
+      toast({
+        variant: 'destructive',
+        title: 'فشل تسجيل الدخول',
+        description: message,
       });
     }
   };
