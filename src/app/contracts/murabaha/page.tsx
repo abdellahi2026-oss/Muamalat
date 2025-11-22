@@ -29,7 +29,7 @@ export default function MurabahaPage() {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('fr-FR', {
       style: 'currency',
-      currency: 'SAR',
+      currency: 'MRU',
     }).format(amount);
   };
 
