@@ -22,43 +22,28 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    /**
-     * Checks if a document exists before an update or delete operation.
-     * This prevents operations on non-existent documents, which is a best practice.
-     */
-    function isExistingDoc() {
-      return resource != null;
-    }
-
     // --------------------------------------------------------------------------------
-    // User Management
+    // User Profile Management
     // --------------------------------------------------------------------------------
     
     /**
-     * @description Users can create and read their own profile. They cannot see other profiles.
+     * @description Users can create and read their own profile. They cannot see other profiles or list all users.
      * @path /users/{userId}
-     * @allow (read, create, update) A user managing their own profile.
-     * @deny (list, delete) Listing or deleting profiles is not allowed for clients.
+     * @allow get - A user can read their OWN profile document.
+     * @allow create - A user can create their own profile document.
+     * @allow update - A user can update their own profile document.
+     * @deny list, delete - Listing or deleting profiles is not allowed for clients.
      */
     match /users/{userId} {
-      allow read, create, update: if isOwner(userId);
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
       allow list, delete: if false;
     }
-    
-    // --------------------------------------------------------------------------------
-    // Client & User-Owned Data
-    // --------------------------------------------------------------------------------
 
-    /**
-     * @description A user can create and manage their own client profile.
-     * @path /clients/{clientId}
-     * @allow (read, write) A signed-in user managing their own document.
-     * @deny (list) Listing all clients is forbidden to prevent user enumeration.
-     */
-    match /clients/{clientId} {
-      allow read, write: if isOwner(clientId);
-      allow list: if false;
-    }
+    // --------------------------------------------------------------------------------
+    // User-Owned Data (Contracts)
+    // --------------------------------------------------------------------------------
 
     /**
      * @description Secures all user-owned contracts (Murabaha, Mudarabah, Wakalah, Musharakah) in their respective subcollections.
@@ -72,11 +57,11 @@ service cloud.firestore {
     }
 
     // --------------------------------------------------------------------------------
-    // Public Reference Data (Read-Only)
+    // Public Reference Data (Read-Only for all signed-in users)
     // --------------------------------------------------------------------------------
 
     /**
-     * @description Commodity cards are public reference data, readable by anyone but not writable by clients.
+     * @description Commodity cards are public reference data, readable by any signed-in user but not writable by clients.
      * @path /commodityCards/{commodityCardId}
      */
     match /commodityCards/{commodityCardId} {
@@ -103,5 +88,3 @@ service cloud.firestore {
     }
   }
 }
-
-    
