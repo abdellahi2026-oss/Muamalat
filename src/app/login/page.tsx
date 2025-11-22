@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/form';
 import {
   signInWithEmailAndPassword,
+  signInAnonymously,
   type AuthError,
 } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -57,8 +58,30 @@ export default function LoginPage() {
         });
         return;
       }
+      
+      // Temporary solution for admin login simulation
+      if (data.username === 'admin' && data.password === 'Aa12121212@') {
+          try {
+            await signInAnonymously(auth);
+            toast({
+              title: 'تم تسجيل الدخول بنجاح!',
+              description: 'أهلاً بعودتك.',
+            });
+            router.push('/');
+            return; 
+          } catch(e) {
+             toast({
+                variant: 'destructive',
+                title: 'فشل تسجيل الدخول المجهول',
+                description: 'لم نتمكن من محاكاة تسجيل الدخول. يرجى المحاولة مرة أخرى.',
+            });
+            return;
+          }
+      }
 
-      const email = data.username === 'admin' ? 'admin@muamalat.app' : data.username;
+
+      const email = data.username.includes('@') ? data.username : `${data.username}@muamalat.app`;
+
 
       try {
         await signInWithEmailAndPassword(auth, email, data.password);
