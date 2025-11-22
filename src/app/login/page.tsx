@@ -27,7 +27,7 @@ import {
 } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth, useFirestore } from '@/firebase';
-import { doc, setDoc, writeBatch } from 'firebase/firestore';
+import { doc, writeBatch } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 
 
@@ -63,43 +63,41 @@ export default function LoginPage() {
 
     const email = data.username.includes('@') ? data.username : `${data.username}@muamalat.app`;
 
-    // The onAuthStateChanged listener in AppLayout will handle the redirect.
-    // We don't await here to prevent blocking while auth state propagates.
     signInWithEmailAndPassword(auth, email, data.password)
-        .catch(async (error) => {
+        .catch((error) => {
             const signInError = error as AuthError;
             
             if (signInError.code === 'auth/user-not-found' && email === 'admin@muamalat.app') {
-                try {
-                    const userCredential = await createUserWithEmailAndPassword(auth, email, data.password);
-                    const adminUser = userCredential.user;
+                createUserWithEmailAndPassword(auth, email, data.password)
+                    .then(async (userCredential) => {
+                         const adminUser = userCredential.user;
+                         const batch = writeBatch(firestore);
 
-                    const batch = writeBatch(firestore);
-
-                    const userDocRef = doc(firestore, 'users', adminUser.uid);
-                    const userData: User = {
-                        id: adminUser.uid,
-                        name: 'Admin',
-                        email: adminUser.email!,
-                        role: 'admin',
-                        status: 'active',
-                    };
-                    batch.set(userDocRef, userData);
+                         const userDocRef = doc(firestore, 'users', adminUser.uid);
+                         const userData: User = {
+                            id: adminUser.uid,
+                            name: 'Admin',
+                            email: adminUser.email!,
+                            role: 'admin',
+                            status: 'active',
+                         };
+                         batch.set(userDocRef, userData);
                     
-                    const adminDocRef = doc(firestore, 'admins', adminUser.uid);
-                    batch.set(adminDocRef, {});
+                         const adminDocRef = doc(firestore, 'admins', adminUser.uid);
+                         batch.set(adminDocRef, {});
 
-                    await batch.commit();
-                    // Login will be handled by onAuthStateChanged, no need to do anything else
-                } catch (creationError) {
-                    const creationAuthError = creationError as AuthError;
-                    toast({
-                        variant: 'destructive',
-                        title: 'فشل إنشاء حساب المدير',
-                        description: creationAuthError.message || 'حدث خطأ أثناء محاولة إنشاء حساب المدير.',
+                         await batch.commit();
+                         // Auth state change will handle the redirect.
+                    })
+                    .catch((creationError) => {
+                        const creationAuthError = creationError as AuthError;
+                        toast({
+                            variant: 'destructive',
+                            title: 'فشل إنشاء حساب المدير',
+                            description: creationAuthError.message || 'حدث خطأ أثناء محاولة إنشاء حساب المدير.',
+                        });
                     });
-                }
-                return; 
+                return;
             }
 
             // Handle other sign-in errors
