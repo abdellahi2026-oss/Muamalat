@@ -3,7 +3,6 @@ export type ContractStatus = 'active' | 'completed' | 'overdue' | 'archived';
 export type User = {
   name: string;
   email: string;
-  avatar: string;
 };
 
 export type Contract = {
