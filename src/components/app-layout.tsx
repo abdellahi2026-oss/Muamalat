@@ -7,6 +7,9 @@ import { useEffect } from 'react';
 import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar';
 import { MainNav } from '@/components/main-nav';
 import { Header } from '@/components/header';
+import { Logo } from './icons';
+import Link from 'next/link';
+import { Button } from './ui/button';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -37,6 +40,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider>
       <Sidebar side="right" collapsible="icon">
+        <div className="flex items-center gap-2 p-2">
+            <Button variant="ghost" size="icon" className="shrink-0" asChild>
+              <Link href="/" aria-label="Home">
+                <Logo className="size-6 text-primary" />
+              </Link>
+            </Button>
+            <div className="flex flex-col">
+              <h2 className="font-headline text-lg font-semibold tracking-tight">
+                مدير المعاملات
+              </h2>
+              <p className="text-sm text-muted-foreground">Muamalat Manager</p>
+            </div>
+          </div>
         <MainNav />
       </Sidebar>
       <SidebarInset>

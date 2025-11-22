@@ -17,6 +17,12 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   SidebarHeader,
   SidebarMenu,
   SidebarMenuItem,
@@ -25,13 +31,85 @@ import {
   SidebarMenuSubItem,
   SidebarMenuSubButton,
   SidebarFooter,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/icons';
 import { cn } from '@/lib/utils';
 import { Separator } from './ui/separator';
 
+function NavLinks() {
+  const pathname = usePathname();
+  const isActive = (path: string) => pathname === path;
+  const isContractsActive = (path: string) => pathname.startsWith(path);
+
+  return (
+    <nav className="flex items-center space-x-4 lg:space-x-6">
+      <Link
+        href="/"
+        className={cn(
+          'text-sm font-medium transition-colors hover:text-primary-foreground/80',
+          isActive('/') ? 'text-primary-foreground' : 'text-primary-foreground/60'
+        )}
+      >
+        لوحة التحكم
+      </Link>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          className={cn(
+            'flex items-center text-sm font-medium transition-colors hover:text-primary-foreground/80',
+            isContractsActive('/contracts')
+              ? 'text-primary-foreground'
+              : 'text-primary-foreground/60'
+          )}
+        >
+          العقود
+          <ChevronDown className="relative top-[1px] ml-1 h-3 w-3 transition duration-200" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuItem>
+            <Link href="/contracts/murabaha">المرابحة</Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem>
+            <Link href="/contracts/mudarabah">المضاربة</Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem>
+            <Link href="/contracts/musharakah">المشاركة</Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem>
+            <Link href="/contracts/wakalah">الوكالة</Link>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <Link
+        href="/commodities"
+        className={cn(
+          'text-sm font-medium transition-colors hover:text-primary-foreground/80',
+          isActive('/commodities')
+            ? 'text-primary-foreground'
+            : 'text-primary-foreground/60'
+        )}
+      >
+        بطاقات السلع
+      </Link>
+      <Link
+        href="/settings"
+        className={cn(
+          'text-sm font-medium transition-colors hover:text-primary-foreground/80',
+          isActive('/settings')
+            ? 'text-primary-foreground'
+            : 'text-primary-foreground/60'
+        )}
+      >
+        الإعدادات
+      </Link>
+    </nav>
+  );
+}
+
+
 export function MainNav() {
+  const { isMobile } = useSidebar();
   const pathname = usePathname();
   const [contractsOpen, setContractsOpen] = React.useState(
     pathname.startsWith('/contracts')
@@ -39,6 +117,10 @@ export function MainNav() {
 
   const isActive = (path: string) => pathname === path;
   const isContractsActive = (type: string) => pathname === `/contracts/${type}`;
+
+  if (!isMobile) {
+    return <NavLinks />;
+  }
 
   return (
     <>
