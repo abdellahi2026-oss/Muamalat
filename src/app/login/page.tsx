@@ -69,6 +69,7 @@ export default function LoginPage() {
       if (signInError.code === 'auth/user-not-found' && email === 'admin@muamalat.app') {
         try {
           await createUserWithEmailAndPassword(auth, email, data.password);
+          // IMPORTANT: Do NOT redirect here. The onAuthStateChanged listener will handle it.
         } catch (creationError) {
            const creationAuthError = creationError as AuthError;
           toast({
