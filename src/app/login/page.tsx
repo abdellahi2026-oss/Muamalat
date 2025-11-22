@@ -22,12 +22,11 @@ import {
 } from '@/components/ui/form';
 import {
   signInWithEmailAndPassword,
-  signInAnonymously,
   type AuthError,
 } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { useAuth, useFirestore } from '@/firebase';
+import { useAuth } from '@/firebase';
 
 const formSchema = z.object({
   username: z.string().min(3, { message: 'يجب أن يكون اسم المستخدم 3 أحرف على الأقل.' }),
@@ -58,27 +57,6 @@ export default function LoginPage() {
         });
         return;
       }
-      
-      // Temporary solution for admin login simulation
-      if (data.username === 'admin' && data.password === 'Aa12121212@') {
-          try {
-            await signInAnonymously(auth);
-            toast({
-              title: 'تم تسجيل الدخول بنجاح!',
-              description: 'أهلاً بعودتك.',
-            });
-            router.push('/');
-            return; 
-          } catch(e) {
-             toast({
-                variant: 'destructive',
-                title: 'فشل تسجيل الدخول المجهول',
-                description: 'لم نتمكن من محاكاة تسجيل الدخول. يرجى المحاولة مرة أخرى.',
-            });
-            return;
-          }
-      }
-
 
       const email = data.username.includes('@') ? data.username : `${data.username}@muamalat.app`;
 

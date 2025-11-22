@@ -82,18 +82,7 @@ export default function DashboardPage() {
     (c) => c.status === 'active'
   ).length;
 
-  const totalContractValue = allContracts.reduce((sum, c) => {
-    if (c.type === 'murabaha') {
-      return sum + c.sellingPrice * c.units;
-    }
-    if (c.type === 'mudarabah') {
-      return sum + c.capital;
-    }
-    if (c.type === 'musharakah' || c.type === 'wakalah') {
-      return sum + c.amount;
-    }
-    return sum;
-  }, 0);
+  const totalContractValue = allContracts.reduce((sum, c) => sum + (c.amount || 0), 0);
 
 
   const overdueContracts = allContracts.filter(

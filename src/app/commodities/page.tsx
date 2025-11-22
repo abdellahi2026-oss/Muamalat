@@ -108,22 +108,6 @@ export default function CurrentTransactionsPage() {
     }
   };
 
-  const getContractAmount = (contract: AnyContract) => {
-    switch (contract.type) {
-      case 'murabaha':
-        return contract.sellingPrice * contract.units;
-      case 'mudarabah':
-        return contract.capital;
-      case 'musharakah':
-        return contract.amount;
-      case 'wakalah':
-        return contract.amount;
-      default:
-        return 0;
-    }
-  }
-
-
   return (
     <div className="space-y-6">
       <div className="space-y-1">
@@ -159,7 +143,7 @@ export default function CurrentTransactionsPage() {
                 <TableRow key={contract.id}>
                   <TableCell>{contract.clientName}</TableCell>
                   <TableCell>{getContractTypeArabic(contract.type)}</TableCell>
-                  <TableCell>{formatCurrency(getContractAmount(contract))}</TableCell>
+                  <TableCell>{formatCurrency(contract.amount)}</TableCell>
                   <TableCell>{getStatusBadge(contract.status)}</TableCell>
                   <TableCell>
                     {format(new Date(contract.endDate), 'dd/MM/yyyy')}

@@ -17,6 +17,7 @@ export type Contract = {
   startDate: string;
   endDate: string;
   status: ContractStatus;
+  amount: number;
 };
 
 export type MurabahaContract = Contract & {
@@ -36,7 +37,6 @@ export type MudarabahContract = Contract & {
   };
   capital: number;
   investmentArea: string;
-  amount: number;
 };
 
 export type MusharakahContract = Contract & {
@@ -44,7 +44,6 @@ export type MusharakahContract = Contract & {
   partnerContributions: { partner: string; amount: number }[];
   ownershipPercentages: { partner: string; percentage: number }[];
   profitDistribution: string;
-  amount: number;
 };
 
 export type WakalahContract = Contract & {
@@ -53,7 +52,6 @@ export type WakalahContract = Contract & {
   agencyType: string;
   duration: string;
   feeStructure: string;
-  amount: number;
 };
 
 export type AnyContract = MurabahaContract | MudarabahContract | MusharakahContract | WakalahContract;
@@ -65,4 +63,3 @@ export type CommodityCard = {
   issuingBody: string;
   status: 'available' | 'in-use' | 'expired';
 };
-

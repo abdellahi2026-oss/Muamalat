@@ -89,6 +89,11 @@ export function AddTransactionDialog() {
   const totalProfit =
     units > 0 && purchasePrice > 0 && sellingPrice > 0
       ? (sellingPrice - purchasePrice) * units
+      : null;
+      
+  const totalAmount =
+    units > 0 && sellingPrice > 0
+      ? sellingPrice * units
       : 0;
 
   const onSubmit = async (data: FormValues) => {
@@ -114,6 +119,7 @@ export function AddTransactionDialog() {
         paymentMethod: 'أقساط شهرية',
         startDate: data.startDate.toISOString(),
         endDate: data.endDate.toISOString(),
+        amount: data.sellingPrice * data.units,
       };
       
       const docRef = await addDoc(
@@ -232,7 +238,7 @@ export function AddTransactionDialog() {
                 )}
               />
             </div>
-            {totalProfit > 0 && (
+            {totalProfit !== null && (
               <div className="rounded-md border bg-muted p-3 text-sm">
                 <span className="text-muted-foreground">الربح الإجمالي: </span>
                 <span className="font-semibold">{formatCurrency(totalProfit)}</span>
