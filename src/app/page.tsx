@@ -35,7 +35,7 @@ import {
 import type { AnyContract, MurabahaContract, MudarabahContract, MusharakahContract, WakalahContract } from '@/lib/types';
 import { format } from 'date-fns';
 import { useCollection, useFirestore, useMemoFirebase, useFirebase } from '@/firebase';
-import { collectionGroup, query, where } from 'firebase/firestore';
+import { collection, query, where, collectionGroup } from 'firebase/firestore';
 
 export default function DashboardPage() {
     const firestore = useFirestore();
@@ -43,22 +43,22 @@ export default function DashboardPage() {
 
     const murabahaQuery = useMemoFirebase(() => {
         if (!firestore || !user?.uid) return null;
-        return query(collectionGroup(firestore, 'murabahaContracts'), where('clientId', '==', user.uid));
+        return collection(firestore, 'clients', user.uid, 'murabahaContracts');
     }, [firestore, user?.uid]);
 
     const mudarabahQuery = useMemoFirebase(() => {
         if (!firestore || !user?.uid) return null;
-        return query(collectionGroup(firestore, 'mudarabahContracts'), where('clientId', '==', user.uid));
+        return collection(firestore, 'clients', user.uid, 'mudarabahContracts');
     }, [firestore, user?.uid]);
     
     const musharakahQuery = useMemoFirebase(() => {
         if (!firestore || !user?.uid) return null;
-        return query(collectionGroup(firestore, 'musharakahContracts'), where('partnerIds', 'array-contains', user.uid));
+        return query(collection(firestore, 'musharakahContracts'), where('partnerIds', 'array-contains', user.uid));
     }, [firestore, user?.uid]);
 
     const wakalahQuery = useMemoFirebase(() => {
         if (!firestore || !user?.uid) return null;
-        return query(collectionGroup(firestore, 'wakalahContracts'), where('clientId', '==', user.uid));
+        return collection(firestore, 'clients', user.uid, 'wakalahContracts');
     }, [firestore, user?.uid]);
 
     const { data: murabahaContracts, isLoading: loadingMurabaha } = useCollection<MurabahaContract>(murabahaQuery);
