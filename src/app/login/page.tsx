@@ -26,9 +26,8 @@ import {
 } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { useAuth, useFirestore } from '@/firebase';
+import { useAuth, useFirestore, firebaseConfig } from '@/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import { firebaseConfig } from '@/firebase/config';
 
 const formSchema = z.object({
   username: z.string().min(3, { message: 'يجب أن يكون اسم المستخدم 3 أحرف على الأقل.' }),
