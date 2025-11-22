@@ -20,19 +20,15 @@ import { FirebaseClientProvider } from './client-provider';
 // This function initializes Firebase and returns the instances of the services.
 // It's designed to be idempotent, meaning it will only initialize the app once.
 function initializeFirebase() {
+  // CRITICAL: Check if the config is loaded.
+  if (!firebaseConfig || !firebaseConfig.apiKey) {
+    throw new Error('FATAL: Firebase config is not defined. Please check your environment setup.');
+  }
+
   const apps = getApps();
   let firebaseApp: FirebaseApp;
 
   if (!apps.length) {
-    if (!firebaseConfig.apiKey) {
-      console.error('Firebase API key is not defined. Please check your environment variables.');
-      // Return dummy objects in case of no config to prevent app crash
-      return {
-        firebaseApp: {} as FirebaseApp,
-        firestore: {} as Firestore,
-        auth: {} as Auth,
-      };
-    }
     firebaseApp = initializeApp(firebaseConfig);
   } else {
     firebaseApp = apps[0];

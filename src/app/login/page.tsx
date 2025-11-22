@@ -26,7 +26,7 @@ import {
 } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { useAuth, useFirestore, firebaseConfig } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 
 const formSchema = z.object({
@@ -51,16 +51,6 @@ export default function LoginPage() {
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     try {
-      // Direct check for config availability
-      if (!firebaseConfig.apiKey) {
-        toast({
-          variant: 'destructive',
-          title: 'فشل تهيئة Firebase',
-          description: 'فشل في العثور على إعدادات Firebase. يرجى التأكد من صحة الإعدادات.',
-        });
-        return;
-      }
-      
       if (!auth || !firestore) {
          toast({
           variant: 'destructive',
