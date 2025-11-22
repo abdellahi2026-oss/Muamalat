@@ -26,16 +26,42 @@ export default function CurrentTransactionsPage() {
   const firestore = useFirestore();
   const { user } = useUser();
 
-  const contractsQuery = useMemoFirebase(() => {
+  const murabahaQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
-    // Use a collection group query to get all contracts for the user
-    return query(
-      collectionGroup(firestore, 'murabahaContracts'),
-      where('clientId', '==', user.uid)
-    );
+    return query(collectionGroup(firestore, 'murabahaContracts'), where('clientId', '==', user.uid));
   }, [firestore, user]);
 
-  const { data: allContracts, isLoading } = useCollection<AnyContract>(contractsQuery);
+  const mudarabahQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return query(collectionGroup(firestore, 'mudarabahContracts'), where('clientId', '==', user.uid));
+  }, [firestore, user]);
+  
+  const musharakahQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return query(collectionGroup(firestore, 'musharakahContracts'), where('partnerIds', 'array-contains', user.uid));
+  }, [firestore, user]);
+
+  const wakalahQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return query(collectionGroup(firestore, 'wakalahContracts'), where('clientId', '==', user.uid));
+  }, [firestore, user]);
+
+  const { data: murabahaContracts, isLoading: loadingMurabaha } = useCollection<MurabahaContract>(murabahaQuery);
+  const { data: mudarabahContracts, isLoading: loadingMudarabah } = useCollection<MudarabahContract>(mudarabahQuery);
+  const { data: musharakahContracts, isLoading: loadingMusharakah } = useCollection<MusharakahContract>(musharakahQuery);
+  const { data: wakalahContracts, isLoading: loadingWakalah } = useCollection<WakalahContract>(wakalahQuery);
+
+  const allContracts = useMemo(() => {
+    const contracts: AnyContract[] = [];
+    if (murabahaContracts) contracts.push(...murabahaContracts);
+    if (mudarabahContracts) contracts.push(...mudarabahContracts);
+    if (musharakahContracts) contracts.push(...musharakahContracts);
+    if (wakalahContracts) contracts.push(...wakalahContracts);
+    return contracts;
+  }, [murabahaContracts, mudarabahContracts, musharakahContracts, wakalahContracts]);
+
+  const isLoading = loadingMurabaha || loadingMudarabah || loadingMusharakah || loadingWakalah;
+
 
   const currentTransactions = useMemo(() => {
     if (!allContracts) return [];
