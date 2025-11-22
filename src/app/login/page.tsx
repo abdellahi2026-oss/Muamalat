@@ -28,6 +28,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { useAuth, useFirestore } from '@/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
+import { firebaseConfig } from '@/firebase/config';
 
 const formSchema = z.object({
   username: z.string().min(3, { message: 'يجب أن يكون اسم المستخدم 3 أحرف على الأقل.' }),
@@ -51,11 +52,21 @@ export default function LoginPage() {
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     try {
-      if (!auth || !firestore) {
+      // Direct check for config availability
+      if (!firebaseConfig.apiKey) {
         toast({
           variant: 'destructive',
           title: 'فشل تهيئة Firebase',
-          description: 'يرجى المحاولة مرة أخرى بعد لحظات.',
+          description: 'فشل في العثور على إعدادات Firebase. يرجى التأكد من صحة الإعدادات.',
+        });
+        return;
+      }
+      
+      if (!auth || !firestore) {
+         toast({
+          variant: 'destructive',
+          title: 'فشل تهيئة Firebase',
+          description: 'خدمات Firebase غير متاحة. يرجى المحاولة مرة أخرى.',
         });
         return;
       }
