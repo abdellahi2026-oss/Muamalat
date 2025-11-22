@@ -59,12 +59,12 @@ export function Header() {
 
        <div className="flex flex-1 items-center justify-end gap-2">
         <div className="relative flex-1 md:grow-0">
-          <Button onClick={() => setSearchVisible(!searchVisible)} size="icon" variant="ghost" className="md:hidden">
-            <Search className="h-5 w-5"/>
-            <span className="sr-only">Search</span>
+          <Button onClick={() => setSearchVisible(!searchVisible)} variant="secondary" className="md:hidden">
+            <Search className="me-2" />
+            بحث
           </Button>
            <div className={cn(
-            "absolute left-0 top-full mt-2 w-full md:static md:block md:w-auto",
+            "absolute right-0 top-full mt-2 w-full md:static md:block md:w-auto z-20",
             !searchVisible && "hidden"
           )}>
               <form onSubmit={handleSearch}>
