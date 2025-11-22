@@ -1,6 +1,7 @@
 
 'use client';
 
+import { useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -17,14 +18,21 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { allContracts } from '@/lib/data';
 import type { MudarabahContract } from '@/lib/types';
 import { format } from 'date-fns';
+import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 
 export default function MudarabahPage() {
-  const mudarabahContracts = allContracts.filter(
-    (c) => c.type === 'mudarabah'
-  ) as MudarabahContract[];
+  const firestore = useFirestore();
+  const { user } = useUser();
+
+  const contractsQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return collection(firestore, `clients/${user.uid}/mudarabahContracts`);
+  }, [firestore, user]);
+
+  const { data: mudarabahContracts, isLoading } = useCollection<MudarabahContract>(contractsQuery);
 
     const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('fr-FR', {
@@ -78,7 +86,9 @@ export default function MudarabahPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mudarabahContracts.map((contract) => (
+              {isLoading && <TableRow><TableCell colSpan={4}>جارِ التحميل...</TableCell></TableRow>}
+              {!isLoading && mudarabahContracts?.length === 0 && <TableRow><TableCell colSpan={4}>لا توجد عقود.</TableCell></TableRow>}
+              {mudarabahContracts?.map((contract) => (
                 <TableRow key={contract.id}>
                   <TableCell>{contract.clientName}</TableCell>
                   <TableCell>{formatCurrency(contract.capital)}</TableCell>

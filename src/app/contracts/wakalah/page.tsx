@@ -1,6 +1,7 @@
 
 'use client';
 
+import { useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -17,14 +18,21 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { allContracts } from '@/lib/data';
 import type { WakalahContract } from '@/lib/types';
 import { format } from 'date-fns';
+import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 
 export default function WakalahPage() {
-  const wakalahContracts = allContracts.filter(
-    (c) => c.type === 'wakalah'
-  ) as WakalahContract[];
+  const firestore = useFirestore();
+  const { user } = useUser();
+
+  const contractsQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return collection(firestore, `clients/${user.uid}/wakalahContracts`);
+  }, [firestore, user]);
+
+  const { data: wakalahContracts, isLoading } = useCollection<WakalahContract>(contractsQuery);
 
     const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('fr-FR', {
@@ -79,7 +87,9 @@ export default function WakalahPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {wakalahContracts.map((contract) => (
+              {isLoading && <TableRow><TableCell colSpan={5}>جارِ التحميل...</TableCell></TableRow>}
+              {!isLoading && wakalahContracts?.length === 0 && <TableRow><TableCell colSpan={5}>لا توجد عقود.</TableCell></TableRow>}
+              {wakalahContracts?.map((contract) => (
                 <TableRow key={contract.id}>
                   <TableCell>{contract.clientName}</TableCell>
                   <TableCell>{contract.agentName}</TableCell>

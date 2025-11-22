@@ -1,5 +1,7 @@
+
 'use client';
 
+import { useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -23,7 +25,6 @@ import {
 } from '@/components/ui/chart';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { Badge } from '@/components/ui/badge';
-import { allContracts } from '@/lib/data';
 import {
   Activity,
   ArrowDownRight,
@@ -31,17 +32,59 @@ import {
   CircleDollarSign,
   Users,
 } from 'lucide-react';
-import type { AnyContract } from '@/lib/types';
+import type { AnyContract, MurabahaContract, MudarabahContract, MusharakahContract, WakalahContract } from '@/lib/types';
 import { format } from 'date-fns';
+import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase';
+import { collectionGroup, query, where } from 'firebase/firestore';
 
 export default function DashboardPage() {
+    const firestore = useFirestore();
+    const { user } = useUser();
+
+    const murabahaQuery = useMemoFirebase(() => {
+        if (!firestore || !user) return null;
+        return query(collectionGroup(firestore, 'murabahaContracts'), where('clientId', '==', user.uid));
+    }, [firestore, user]);
+
+    const mudarabahQuery = useMemoFirebase(() => {
+        if (!firestore || !user) return null;
+        return query(collectionGroup(firestore, 'mudarabahContracts'), where('clientId', '==', user.uid));
+    }, [firestore, user]);
+    
+    const musharakahQuery = useMemoFirebase(() => {
+        if (!firestore || !user) return null;
+        return query(collectionGroup(firestore, 'musharakahContracts'), where('partnerIds', 'array-contains', user.uid));
+    }, [firestore, user]);
+
+    const wakalahQuery = useMemoFirebase(() => {
+        if (!firestore || !user) return null;
+        return query(collectionGroup(firestore, 'wakalahContracts'), where('clientId', '==', user.uid));
+    }, [firestore, user]);
+
+    const { data: murabahaContracts, isLoading: loadingMurabaha } = useCollection<MurabahaContract>(murabahaQuery);
+    const { data: mudarabahContracts, isLoading: loadingMudarabah } = useCollection<MudarabahContract>(mudarabahQuery);
+    const { data: musharakahContracts, isLoading: loadingMusharakah } = useCollection<MusharakahContract>(musharakahQuery);
+    const { data: wakalahContracts, isLoading: loadingWakalah } = useCollection<WakalahContract>(wakalahQuery);
+
+    const allContracts = useMemo(() => {
+        const contracts: AnyContract[] = [];
+        if (murabahaContracts) contracts.push(...murabahaContracts);
+        if (mudarabahContracts) contracts.push(...mudarabahContracts);
+        if (musharakahContracts) contracts.push(...musharakahContracts);
+        if (wakalahContracts) contracts.push(...wakalahContracts);
+        return contracts;
+    }, [murabahaContracts, mudarabahContracts, musharakahContracts, wakalahContracts]);
+
+    const isLoading = loadingMurabaha || loadingMudarabah || loadingMusharakah || loadingWakalah;
+
+
   const activeContracts = allContracts.filter(
     (c) => c.status === 'active'
   ).length;
 
   const totalContractValue = allContracts.reduce((sum, c) => {
     if (c.type === 'murabaha') {
-      return sum + c.sellingPrice;
+      return sum + c.sellingPrice * c.units;
     }
     if (c.type === 'mudarabah') {
       return sum + c.capital;
@@ -130,7 +173,7 @@ export default function DashboardPage() {
             <CircleDollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalContractValue)}</div>
+            <div className="text-2xl font-bold">{isLoading ? '...' : formatCurrency(totalContractValue)}</div>
             <p className="text-xs text-muted-foreground">
               +2.1% من الشهر الماضي
             </p>
@@ -142,7 +185,7 @@ export default function DashboardPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+{activeContracts}</div>
+            <div className="text-2xl font-bold">{isLoading ? '...' : `+${activeContracts}`}</div>
             <p className="text-xs text-muted-foreground">
               +15.3% من الشهر الماضي
             </p>
@@ -154,7 +197,7 @@ export default function DashboardPage() {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{overdueContracts}</div>
+            <div className="text-2xl font-bold">{isLoading ? '...' : overdueContracts}</div>
             <p className="text-xs text-muted-foreground">
                {overdueContracts > 0 ? <ArrowUpRight className="h-4 w-4 text-destructive inline"/> : <ArrowDownRight className="h-4 w-4 text-green-500 inline"/>} {overdueContracts > 0 ? '+2' : ''} عن الشهر الماضي
             </p>
@@ -183,6 +226,11 @@ export default function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+             {isLoading ? (
+                <div className="flex h-64 w-full items-center justify-center">
+                  <p>جارِ تحميل الرسم البياني...</p>
+                </div>
+              ) : (
             <ChartContainer config={chartConfig} className="h-64 w-full">
               <BarChart data={chartData} accessibilityLayer>
                 <CartesianGrid vertical={false} />
@@ -206,6 +254,7 @@ export default function DashboardPage() {
                 <Bar dataKey="count" radius={4} />
               </BarChart>
             </ChartContainer>
+            )}
           </CardContent>
         </Card>
 
@@ -226,7 +275,9 @@ export default function DashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {attentionContracts.map((contract) => (
+                {isLoading && <TableRow><TableCell colSpan={3}>جارِ التحميل...</TableCell></TableRow>}
+                {!isLoading && attentionContracts.length === 0 && <TableRow><TableCell colSpan={3}>لا توجد عقود.</TableCell></TableRow>}
+                {!isLoading && attentionContracts.map((contract) => (
                   <TableRow key={contract.id}>
                     <TableCell>
                       <div className="font-medium">{contract.clientName}</div>
