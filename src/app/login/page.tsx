@@ -26,7 +26,6 @@ import {
   type AuthError,
 } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/firebase';
 
 const formSchema = z.object({
@@ -38,7 +37,6 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function LoginPage() {
   const { toast } = useToast();
-  const router = useRouter();
   const auth = useAuth();
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -70,13 +68,14 @@ export default function LoginPage() {
         try {
           // If admin user doesn't exist, create it and then sign in.
           await createUserWithEmailAndPassword(auth, email, data.password);
-          await signInWithEmailAndPassword(auth, email, data.password);
-          // AppLayout will redirect upon successful login.
+          // After creation, signIn will be handled by the auth state listener in AppLayout
+          // which will trigger the redirect. No need to call signIn again here.
         } catch (creationError) {
+           const creationAuthError = creationError as AuthError;
           toast({
             variant: 'destructive',
             title: 'فشل إنشاء حساب المدير',
-            description: 'حدث خطأ أثناء محاولة إنشاء حساب المدير.',
+            description: creationAuthError.message || 'حدث خطأ أثناء محاولة إنشاء حساب المدير.',
           });
         }
         return; 
@@ -96,7 +95,7 @@ export default function LoginPage() {
           message = 'فشل الاتصال بالشبكة. يرجى التحقق من اتصالك بالإنترنت.';
           break;
         default:
-          message = 'كلمة مرور أو اسم مستخدم غير صحيح';
+          message = signInError.message || 'كلمة مرور أو اسم مستخدم غير صحيح';
           break;
       }
       toast({
