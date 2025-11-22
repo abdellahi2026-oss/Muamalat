@@ -8,6 +8,8 @@ import {
   FileText,
   CreditCard,
   ChevronDown,
+  Home,
+  Settings,
 } from 'lucide-react';
 import {
   Collapsible,
@@ -38,6 +40,16 @@ export function MainNav() {
     <>
       {/* Mobile Nav */}
       <nav className="mt-8 flex flex-col space-y-2 md:hidden">
+        <Link
+            href="/"
+            className={cn(
+                'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary',
+                pathname === '/' && 'bg-muted text-primary'
+            )}
+        >
+            <Home className="h-4 w-4" />
+            لوحة التحكم
+        </Link>
         <Collapsible open={contractsOpen} onOpenChange={setContractsOpen} className='w-full'>
             <CollapsibleTrigger asChild>
               <button
@@ -92,7 +104,7 @@ export function MainNav() {
           )}
         >
           <CreditCard className="h-4 w-4" />
-          بطاقات السلع
+          المعاملات الحالية
         </Link>
       </nav>
 
@@ -134,7 +146,7 @@ export function MainNav() {
             pathname === '/commodities' ? 'text-primary-foreground' : 'text-primary-foreground/60'
           )}
         >
-          بطاقات السلع
+          المعاملات الحالية
         </Link>
       </nav>
     </>

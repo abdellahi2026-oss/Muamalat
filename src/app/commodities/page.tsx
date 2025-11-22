@@ -17,11 +17,15 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { commodityCards } from '@/lib/data';
-import type { CommodityCard } from '@/lib/types';
+import { allContracts } from '@/lib/data';
+import type { AnyContract } from '@/lib/types';
+import { format } from 'date-fns';
 
+export default function CurrentTransactionsPage() {
+  const currentTransactions = allContracts.filter(
+    (c) => c.status === 'active' || c.status === 'overdue'
+  );
 
-export default function CommoditiesPage() {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('fr-FR', {
       style: 'currency',
@@ -29,51 +33,75 @@ export default function CommoditiesPage() {
     }).format(amount);
   };
 
-  const getStatusBadge = (status: CommodityCard['status']) => {
+  const getStatusBadge = (status: AnyContract['status']) => {
     switch (status) {
-      case 'available':
-        return <Badge variant='secondary' className="bg-green-600 hover:bg-green-700 text-white">متاحة</Badge>;
-      case 'in-use':
-        return <Badge variant="default">قيد الاستخدام</Badge>;
-      case 'expired':
-        return <Badge variant="destructive">منتهية الصلاحية</Badge>;
+      case 'active':
+        return <Badge variant='secondary'>نشط</Badge>;
+      case 'overdue':
+        return <Badge variant="destructive">متأخر</Badge>;
+      case 'completed':
+         return (
+          <Badge variant="default" className="bg-green-600 hover:bg-green-700">
+            مكتمل
+          </Badge>
+        );
+      case 'archived':
+        return <Badge variant="outline">مؤرشف</Badge>;
     }
   };
+  
+    const getContractTypeArabic = (type: AnyContract['type']) => {
+    switch (type) {
+      case 'murabaha':
+        return 'مرابحة';
+      case 'mudarabah':
+        return 'مضاربة';
+      case 'musharakah':
+        return 'مشاركة';
+      case 'wakalah':
+        return 'وكالة';
+    }
+  };
+
 
   return (
     <div className="space-y-6">
       <div className="space-y-1">
         <h1 className="font-headline text-3xl font-bold tracking-tight">
-          بطاقات السلع
+          المعاملات الحالية
         </h1>
         <p className="text-muted-foreground">
-          عرض وإدارة بطاقات السلع المتاحة.
+          عرض جميع المعاملات النشطة والمتأخرة.
         </p>
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>قائمة البطاقات</CardTitle>
+          <CardTitle>قائمة المعاملات</CardTitle>
           <CardDescription>
-            جميع بطاقات السلع المتاحة وقيد الاستخدام.
+            جميع المعاملات التي تتطلب متابعة.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>رقم البطاقة</TableHead>
-                <TableHead>القيمة الاسمية</TableHead>
-                <TableHead>جهة الإصدار</TableHead>
+                <TableHead>العميل</TableHead>
+                <TableHead>نوع العقد</TableHead>
+                <TableHead>المبلغ</TableHead>
                 <TableHead>الحالة</TableHead>
+                 <TableHead>تاريخ الانتهاء</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {commodityCards.map((card) => (
-                <TableRow key={card.id}>
-                  <TableCell className='font-mono'>{card.cardNumber}</TableCell>
-                  <TableCell>{formatCurrency(card.nominalValue)}</TableCell>
-                  <TableCell>{card.issuingBody}</TableCell>
-                  <TableCell>{getStatusBadge(card.status)}</TableCell>
+              {currentTransactions.map((contract) => (
+                <TableRow key={contract.id}>
+                  <TableCell>{contract.clientName}</TableCell>
+                  <TableCell>{getContractTypeArabic(contract.type)}</TableCell>
+                  <TableCell>{formatCurrency(contract.amount)}</TableCell>
+                  <TableCell>{getStatusBadge(contract.status)}</TableCell>
+                  <TableCell>
+                    {format(new Date(contract.endDate), 'dd/MM/yyyy')}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
