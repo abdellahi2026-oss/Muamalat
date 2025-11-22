@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -17,12 +18,12 @@ import Link from 'next/link';
 import { Skeleton } from './ui/skeleton';
 import { useAuth } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { useUser } from '@/firebase/auth/use-user';
+import { useFirebase } from '@/firebase/provider';
 
 export function UserNav() {
   const auth = useAuth();
   const router = useRouter();
-  const { user, loading } = useUser();
+  const { user, isUserLoading } = useFirebase();
 
   const handleLogout = async () => {
     if (!auth) return;
@@ -30,7 +31,7 @@ export function UserNav() {
     router.push('/login');
   };
 
-  if (loading) {
+  if (isUserLoading) {
     return <Skeleton className="h-10 w-10 rounded-full" />;
   }
 

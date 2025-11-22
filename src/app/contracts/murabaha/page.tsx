@@ -20,12 +20,12 @@ import {
 import { Badge } from '@/components/ui/badge';
 import type { MurabahaContract as MurabahaContractType } from '@/lib/types';
 import { format } from 'date-fns';
-import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useFirebase } from '@/firebase';
 import { collectionGroup, query, where } from 'firebase/firestore';
 
 export default function MurabahaPage() {
   const firestore = useFirestore();
-  const { user } = useUser();
+  const { user } = useFirebase();
 
   const contractsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;

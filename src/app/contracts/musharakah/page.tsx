@@ -20,13 +20,13 @@ import {
 import { Badge } from '@/components/ui/badge';
 import type { MusharakahContract } from '@/lib/types';
 import { format } from 'date-fns';
-import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useFirebase } from '@/firebase';
 import { query, collectionGroup, where } from 'firebase/firestore';
 
 
 export default function MusharakahPage() {
   const firestore = useFirestore();
-  const { user } = useUser();
+  const { user } = useFirebase();
 
   const contractsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;

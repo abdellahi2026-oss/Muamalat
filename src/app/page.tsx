@@ -34,12 +34,12 @@ import {
 } from 'lucide-react';
 import type { AnyContract, MurabahaContract, MudarabahContract, MusharakahContract, WakalahContract } from '@/lib/types';
 import { format } from 'date-fns';
-import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useFirebase } from '@/firebase';
 import { collectionGroup, query, where } from 'firebase/firestore';
 
 export default function DashboardPage() {
     const firestore = useFirestore();
-    const { user } = useUser();
+    const { user } = useFirebase();
 
     const murabahaQuery = useMemoFirebase(() => {
         if (!firestore || !user?.uid) return null;

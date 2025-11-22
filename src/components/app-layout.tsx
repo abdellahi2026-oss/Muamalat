@@ -2,17 +2,17 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { useUser } from '@/firebase/auth/use-user';
+import { useFirebase } from '@/firebase/provider';
 import { useEffect } from 'react';
 import { Header } from '@/components/header';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, loading } = useUser();
+  const { user, isUserLoading } = useFirebase();
 
   useEffect(() => {
-    if (loading) {
+    if (isUserLoading) {
       return; // Do nothing while loading
     }
 
@@ -25,10 +25,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     if (user && isAuthPage) {
       router.push('/');
     }
-  }, [user, loading, pathname, router]);
+  }, [user, isUserLoading, pathname, router]);
 
   // While loading, or if no user and not on login page (during redirect), render nothing.
-  if (loading || (!user && pathname !== '/login')) {
+  if (isUserLoading || (!user && pathname !== '/login')) {
     return null;
   }
   

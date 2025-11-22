@@ -35,7 +35,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { collection, addDoc } from 'firebase/firestore';
-import { useAuth, useFirestore, useUser } from '@/firebase';
+import { useAuth, useFirestore, useFirebase } from '@/firebase';
 
 const formSchema = z
   .object({
@@ -70,7 +70,7 @@ export function AddTransactionDialog() {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
-  const { user } = useUser();
+  const { user } = useFirebase();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
