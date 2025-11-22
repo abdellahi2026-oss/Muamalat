@@ -21,7 +21,6 @@ import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 
 export function Header() {
-  const [searchVisible, setSearchVisible] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const router = useRouter();
 
@@ -58,28 +57,17 @@ export function Header() {
 
 
        <div className="flex flex-1 items-center justify-end gap-2">
-        <div className="relative flex-1 md:grow-0">
-          <Button onClick={() => setSearchVisible(!searchVisible)} variant="secondary" className="md:hidden h-10 px-4 py-2">
-            <Search className="me-2" />
-            بحث
-          </Button>
-           <div className={cn(
-            "absolute right-0 top-full mt-2 w-full md:static md:block md:w-auto z-20",
-            !searchVisible && "hidden"
-          )}>
-              <form onSubmit={handleSearch}>
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                        placeholder="بحث في المعاملات..." 
-                        className="w-full rounded-lg bg-background text-foreground pl-10 md:w-[200px] lg:w-[320px]"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                </div>
-              </form>
-           </div>
-        </div>
+            <form onSubmit={handleSearch} className="hidden md:flex">
+              <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                      placeholder="بحث في المعاملات..." 
+                      className="w-full rounded-lg bg-background text-foreground pl-10 md:w-[200px] lg:w-[320px]"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+              </div>
+            </form>
         <AddTransactionDialog />
         <UserNav />
         <Sheet>
@@ -94,6 +82,19 @@ export function Header() {
                 <SheetTitle>القائمة</SheetTitle>
               </SheetHeader>
               <MainNav />
+               <div className="p-4">
+                 <form onSubmit={handleSearch}>
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input 
+                            placeholder="بحث في المعاملات..." 
+                            className="w-full rounded-lg bg-background text-foreground pl-10"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                  </form>
+               </div>
             </SheetContent>
         </Sheet>
       </div>
