@@ -23,6 +23,60 @@ import { useCollection, useFirestore, useMemoFirebase, useFirebase } from '@/fir
 import { collection, query, where } from 'firebase/firestore';
 import { useSearchParams } from 'next/navigation';
 
+const getContractTypeArabic = (type: AnyContract['type']) => {
+  switch (type) {
+    case 'murabaha':
+      return 'مرابحة';
+    case 'mudarabah':
+      return 'مضاربة';
+    case 'musharakah':
+      return 'مشاركة';
+    case 'wakalah':
+      return 'وكالة';
+    default:
+      return 'عقد';
+  }
+};
+
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'MRU',
+  }).format(amount);
+};
+
+const getStatusBadge = (status: AnyContract['status']) => {
+  switch (status) {
+    case 'active':
+      return <Badge variant='secondary'>نشط</Badge>;
+    case 'overdue':
+      return <Badge variant="destructive">متأخر</Badge>;
+    case 'completed':
+       return (
+        <Badge variant="default" className="bg-green-600 hover:bg-green-700">
+          مكتمل
+        </Badge>
+      );
+    case 'archived':
+      return <Badge variant="outline">مؤرشف</Badge>;
+    default:
+      return <Badge variant="outline">{status}</Badge>;
+  }
+};
+
+const renderClientOrProject = (contract: AnyContract) => {
+  let details = contract.clientName;
+  if (contract.type === 'musharakah') {
+      const partners = (contract as MusharakahContract).partnerIds.slice(0, 2).join(', ');
+      details += ` (شركاء: ${partners}...)`;
+  }
+  if (contract.type === 'wakalah') {
+      details += ` (وكيل: ${(contract as WakalahContract).agentName})`;
+  }
+  return details;
+}
+
+
 export default function CurrentTransactionsPage() {
   const firestore = useFirestore();
   const { user } = useFirebase();
@@ -65,21 +119,6 @@ export default function CurrentTransactionsPage() {
 
   const isLoading = loadingMurabaha || loadingMudarabah || loadingMusharakah || loadingWakalah;
 
-  const getContractTypeArabic = (type: AnyContract['type']) => {
-    switch (type) {
-      case 'murabaha':
-        return 'مرابحة';
-      case 'mudarabah':
-        return 'مضاربة';
-      case 'musharakah':
-        return 'مشاركة';
-      case 'wakalah':
-        return 'وكالة';
-      default:
-        return 'عقد';
-    }
-  };
-
   const filteredContracts = useMemo(() => {
     if (!allContracts) return [];
     if (!searchQuery) return allContracts;
@@ -105,45 +144,6 @@ export default function CurrentTransactionsPage() {
         return clientNameMatch || typeMatch || partnerMatch || agentMatch;
     });
   }, [allContracts, searchQuery]);
-
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'MRU',
-    }).format(amount);
-  };
-  
-  const getStatusBadge = (status: AnyContract['status']) => {
-    switch (status) {
-      case 'active':
-        return <Badge variant='secondary'>نشط</Badge>;
-      case 'overdue':
-        return <Badge variant="destructive">متأخر</Badge>;
-      case 'completed':
-         return (
-          <Badge variant="default" className="bg-green-600 hover:bg-green-700">
-            مكتمل
-          </Badge>
-        );
-      case 'archived':
-        return <Badge variant="outline">مؤرشف</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
-
-  const renderClientOrProject = (contract: AnyContract) => {
-    let details = contract.clientName;
-    if (contract.type === 'musharakah') {
-        const partners = (contract as MusharakahContract).partnerIds.slice(0, 2).join(', ');
-        details += ` (شركاء: ${partners}...)`;
-    }
-    if (contract.type === 'wakalah') {
-        details += ` (وكيل: ${(contract as WakalahContract).agentName})`;
-    }
-    return details;
-  }
 
   return (
     <div className="space-y-6">
