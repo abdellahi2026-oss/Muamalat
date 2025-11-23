@@ -6,6 +6,17 @@ import { useFirebase } from '@/firebase/provider';
 import { useEffect } from 'react';
 import { Header } from '@/components/header';
 
+function Footer() {
+    return (
+        <footer className="bg-primary text-primary-foreground py-4 mt-auto">
+            <div className="container mx-auto text-center text-sm">
+                <p>&copy; 2024 - créé Par Abdellahi EMS</p>
+            </div>
+        </footer>
+    );
+}
+
+
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -39,9 +50,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   // If we have a user and are not on the login page, render the full app layout
   return (
-    <>
+    <div className="flex flex-col min-h-screen">
       <Header />
-      <main className="p-4 sm:p-6 lg:p-8">{children}</main>
-    </>
+      <main className="flex-grow p-4 sm:p-6 lg:p-8">{children}</main>
+      <Footer />
+    </div>
   );
 }
