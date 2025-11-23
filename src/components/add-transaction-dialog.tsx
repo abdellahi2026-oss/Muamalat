@@ -227,7 +227,7 @@ export function AddTransactionDialog() {
                 sellingPrice: data.sellingPrice,
                 amount: (data.sellingPrice || 0) * (data.units || 0),
                 paymentMethod: 'أقساط شهرية',
-                commodityCardId: data.commodityCardId,
+                ...(data.commodityCardId && { commodityCardId: data.commodityCardId }),
             };
             break;
         case 'mudarabah':
@@ -570,7 +570,7 @@ export function AddTransactionDialog() {
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>تاريخ البدء</FormLabel>
-                    <Popover>
+                    <Popover modal={true}>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
@@ -611,7 +611,7 @@ export function AddTransactionDialog() {
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>تاريخ الانتهاء</FormLabel>
-                    <Popover>
+                    <Popover modal={true}>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
