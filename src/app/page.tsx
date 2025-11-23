@@ -38,7 +38,7 @@ import { useCollection, useFirestore, useMemoFirebase, useFirebase } from '@/fir
 import { collection, query, where, collectionGroup } from 'firebase/firestore';
 import { DateRangePicker } from '@/components/date-range-picker';
 import type { DateRange } from 'react-day-picker';
-import { subDays } from 'date-fns';
+import { subDays, addDays } from 'date-fns';
 
 
 export default function DashboardPage() {
@@ -94,6 +94,17 @@ export default function DashboardPage() {
         });
 
     }, [murabahaContracts, mudarabahContracts, musharakahContracts, wakalahContracts, dateRange]);
+    
+    // We need all contracts for the "attention" section, not just the ones in the date range.
+    const allContractsUnfiltered = useMemo(() => {
+        const contracts: AnyContract[] = [];
+        if (murabahaContracts) contracts.push(...murabahaContracts);
+        if (mudarabahContracts) contracts.push(...mudarabahContracts);
+        if (musharakahContracts) contracts.push(...musharakahContracts);
+        if (wakalahContracts) contracts.push(...wakalahContracts);
+        return contracts;
+    }, [murabahaContracts, mudarabahContracts, musharakahContracts, wakalahContracts]);
+
 
     const isLoading = loadingMurabaha || loadingMudarabah || loadingMusharakah || loadingWakalah;
 
@@ -130,12 +141,21 @@ export default function DashboardPage() {
   }, [allContracts]);
 
 
-  const overdueContracts = allContracts.filter(
-    (c) => c.status === 'overdue'
-  ).length;
-  const attentionContracts = allContracts.filter(
-    (c) => c.status === 'overdue' || c.status === 'active'
-  ).slice(0, 5);
+  const attentionContracts = useMemo(() => {
+    const today = new Date();
+    const oneWeekFromNow = addDays(today, 7);
+
+    return allContractsUnfiltered
+        .filter(c => {
+            if (c.status === 'completed') return false;
+            const endDate = new Date(c.endDate);
+            const isOverdue = c.status === 'overdue';
+            const isEndingSoon = endDate >= today && endDate <= oneWeekFromNow;
+            return isOverdue || isEndingSoon;
+        })
+        .sort((a, b) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime())
+        .slice(0, 5);
+  }, [allContractsUnfiltered]);
 
   const contractTypes = allContracts.reduce((acc, contract) => {
     acc[contract.type] = (acc[contract.type] || 0) + 1;
@@ -299,7 +319,7 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle>عقود تتطلب الانتباه</CardTitle>
             <CardDescription>
-              قائمة بالعقود التي قاربت على الانتهاء أو المتأخرة.
+              العقود المتأخرة أو التي تنتهي خلال أسبوع.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -336,3 +356,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
