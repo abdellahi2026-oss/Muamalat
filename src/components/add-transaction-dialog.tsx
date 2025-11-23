@@ -664,9 +664,3 @@ export function AddTransactionDialog() {
     </Dialog>
   );
 }
-
-    
-    
-
-    
-
