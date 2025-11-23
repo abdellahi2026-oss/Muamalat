@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, Edit, Trash, CheckCircle } from 'lucide-react';
+import { MoreHorizontal, Edit, Trash, CheckCircle, Undo2 } from 'lucide-react';
 import type { AnyContract } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
@@ -35,6 +35,7 @@ export function TransactionActions({ contract }: TransactionActionsProps) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
+  const [isReopenDialogOpen, setIsReopenDialogOpen] = useState(false);
   
   const { toast } = useToast();
   const { firestore, user } = useFirebase();
@@ -63,6 +64,23 @@ export function TransactionActions({ contract }: TransactionActionsProps) {
       });
     }
     setIsCompleteDialogOpen(false);
+  };
+  
+  const handleReopen = async () => {
+    if (!firestore || !user) return;
+    const collectionName = getCollectionName(contract.type);
+    const docRef = doc(firestore, 'clients', user.uid, collectionName, contract.id);
+    try {
+      await updateDoc(docRef, { status: 'active' });
+      toast({ title: 'تم إعادة فتح العقد بنجاح' });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'خطأ',
+        description: 'فشل إعادة فتح العقد: ' + error.message,
+      });
+    }
+    setIsReopenDialogOpen(false);
   };
 
   const handleDelete = async () => {
@@ -96,10 +114,15 @@ export function TransactionActions({ contract }: TransactionActionsProps) {
             <Edit className="mr-2 h-4 w-4" />
             <span>تعديل</span>
           </DropdownMenuItem>
-          {contract.status !== 'completed' && (
+          {contract.status !== 'completed' ? (
              <DropdownMenuItem onSelect={() => setIsCompleteDialogOpen(true)}>
                 <CheckCircle className="mr-2 h-4 w-4" />
                 <span>إنهاء العقد</span>
+            </DropdownMenuItem>
+          ) : (
+             <DropdownMenuItem onSelect={() => setIsReopenDialogOpen(true)}>
+                <Undo2 className="mr-2 h-4 w-4" />
+                <span>إعادة فتح العقد</span>
             </DropdownMenuItem>
           )}
           <DropdownMenuSeparator />
@@ -126,12 +149,28 @@ export function TransactionActions({ contract }: TransactionActionsProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>هل أنت متأكد من إنهاء العقد؟</AlertDialogTitle>
             <AlertDialogDescription>
-              سيؤدي هذا الإجراء إلى تغيير حالة العقد إلى "مكتمل". لا يمكن التراجع عن هذا الإجراء.
+              سيؤدي هذا الإجراء إلى تغيير حالة العقد إلى "مكتمل".
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>إلغاء</AlertDialogCancel>
             <AlertDialogAction onClick={handleComplete}>تأكيد الإنهاء</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+       {/* Re-open Confirmation Dialog */}
+      <AlertDialog open={isReopenDialogOpen} onOpenChange={setIsReopenDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>هل أنت متأكد من إعادة فتح العقد؟</AlertDialogTitle>
+            <AlertDialogDescription>
+              سيؤدي هذا الإجراء إلى تغيير حالة العقد إلى "نشط".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction onClick={handleReopen}>تأكيد إعادة الفتح</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
