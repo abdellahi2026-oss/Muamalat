@@ -20,7 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import type { AnyContract, MurabahaContract, MudarabahContract, MusharakahContract, WakalahContract } from '@/lib/types';
 import { format } from 'date-fns';
 import { useCollection, useFirestore, useMemoFirebase, useFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection } from 'firebase/firestore';
 import { useSearchParams } from 'next/navigation';
 import { TransactionActions } from '@/components/transaction-actions';
 
