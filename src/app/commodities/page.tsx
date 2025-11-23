@@ -134,34 +134,37 @@ export default function CurrentTransactionsPage() {
   const filteredContracts = useMemo(() => {
     if (!allContracts) return [];
     
-    let filtered = allContracts;
+    let filteredData = allContracts;
 
+    // 1. Filter by status if statusQuery exists
     if (statusQuery) {
-        filtered = filtered.filter(contract => contract.status === statusQuery);
+        filteredData = filteredData.filter(contract => contract.status === statusQuery);
     }
     
-    if (!searchQuery) return filtered;
+    // 2. Filter by search query if searchQuery exists
+    if (searchQuery) {
+        const lowercasedQuery = searchQuery.toLowerCase();
+        filteredData = filteredData.filter(contract => {
+            const clientNameMatch = contract.clientName?.toLowerCase().includes(lowercasedQuery);
+            const typeMatch = getContractTypeArabic(contract.type).toLowerCase().includes(lowercasedQuery);
+            let partnerMatch = false;
+            let agentMatch = false;
 
-    const lowercasedQuery = searchQuery.toLowerCase();
-    
-    return filtered.filter(contract => {
-        const clientNameMatch = contract.clientName?.toLowerCase().includes(lowercasedQuery);
-        const typeMatch = getContractTypeArabic(contract.type).toLowerCase().includes(lowercasedQuery);
-        let partnerMatch = false;
-        let agentMatch = false;
+            if (contract.type === 'musharakah') {
+                const musharakah = contract as MusharakahContract;
+                partnerMatch = musharakah.partnerIds.some(p => p.toLowerCase().includes(lowercasedQuery));
+            }
 
-        if (contract.type === 'musharakah') {
-            const musharakah = contract as MusharakahContract;
-            partnerMatch = musharakah.partnerIds.some(p => p.toLowerCase().includes(lowercasedQuery));
-        }
+            if (contract.type === 'wakalah') {
+                const wakalah = contract as WakalahContract;
+                agentMatch = wakalah.agentName?.toLowerCase().includes(lowercasedQuery);
+            }
 
-        if (contract.type === 'wakalah') {
-            const wakalah = contract as WakalahContract;
-            agentMatch = wakalah.agentName?.toLowerCase().includes(lowercasedQuery);
-        }
+            return clientNameMatch || typeMatch || partnerMatch || agentMatch;
+        });
+    }
 
-        return clientNameMatch || typeMatch || partnerMatch || agentMatch;
-    });
+    return filteredData;
   }, [allContracts, searchQuery, statusQuery]);
 
   const pageTitle = useMemo(() => {
@@ -173,7 +176,7 @@ export default function CurrentTransactionsPage() {
   const pageDescription = useMemo(() => {
     if (searchQuery) return `نتائج البحث عن "${searchQuery}"`;
     if (statusQuery === 'active') return 'جميع المعاملات التي حالتها نشطة حالياً.';
-    if (statusQuery === 'completed') return 'جميع المعاملات التي تم إكمالها.';
+    if (statusQuery === 'completed') return 'جميع المع-املات التي تم إكمالها.';
     return 'جميع المعاملات التي قمت بها، الحالية والسابقة.';
   }, [searchQuery, statusQuery]);
 
