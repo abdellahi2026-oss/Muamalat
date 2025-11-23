@@ -22,6 +22,7 @@ import { format } from 'date-fns';
 import { useCollection, useFirestore, useMemoFirebase, useFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 import { useSearchParams } from 'next/navigation';
+import { TransactionActions } from '@/components/transaction-actions';
 
 const getContractTypeArabic = (type: AnyContract['type']) => {
   switch (type) {
@@ -171,13 +172,14 @@ export default function CurrentTransactionsPage() {
                 <TableHead>المبلغ</TableHead>
                 <TableHead>الحالة</TableHead>
                  <TableHead>تاريخ الانتهاء</TableHead>
+                 <TableHead className="text-right">إجراءات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading && <TableRow><TableCell colSpan={5} className="text-center">جارِ التحميل...</TableCell></TableRow>}
+              {isLoading && <TableRow><TableCell colSpan={6} className="text-center">جارِ التحميل...</TableCell></TableRow>}
               {!isLoading && filteredContracts.length === 0 && (
                 <TableRow>
-                    <TableCell colSpan={5} className="text-center">
+                    <TableCell colSpan={6} className="text-center">
                         {searchQuery ? 'لم يتم العثور على نتائج.' : 'لا توجد معاملات لعرضها.'}
                     </TableCell>
                 </TableRow>
@@ -190,6 +192,9 @@ export default function CurrentTransactionsPage() {
                   <TableCell>{getStatusBadge(contract.status)}</TableCell>
                   <TableCell>
                     {contract.endDate ? format(new Date(contract.endDate), 'dd/MM/yyyy') : 'N/A'}
+                  </TableCell>
+                   <TableCell className="text-right">
+                    <TransactionActions contract={contract} />
                   </TableCell>
                 </TableRow>
               ))}

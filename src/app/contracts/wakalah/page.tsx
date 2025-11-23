@@ -22,6 +22,7 @@ import type { WakalahContract } from '@/lib/types';
 import { format } from 'date-fns';
 import { useCollection, useFirestore, useMemoFirebase, useFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
+import { TransactionActions } from '@/components/transaction-actions';
 
 export default function WakalahPage() {
   const firestore = useFirestore();
@@ -84,11 +85,12 @@ export default function WakalahPage() {
                  <TableHead>رسوم الوكالة</TableHead>
                 <TableHead>الحالة</TableHead>
                 <TableHead>تاريخ الانتهاء</TableHead>
+                <TableHead className="text-right">إجراءات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading && <TableRow><TableCell colSpan={5}>جارِ التحميل...</TableCell></TableRow>}
-              {!isLoading && wakalahContracts?.length === 0 && <TableRow><TableCell colSpan={5}>لا توجد عقود.</TableCell></TableRow>}
+              {isLoading && <TableRow><TableCell colSpan={6}>جارِ التحميل...</TableCell></TableRow>}
+              {!isLoading && wakalahContracts?.length === 0 && <TableRow><TableCell colSpan={6}>لا توجد عقود.</TableCell></TableRow>}
               {wakalahContracts?.map((contract) => (
                 <TableRow key={contract.id}>
                   <TableCell>{contract.clientName}</TableCell>
@@ -97,6 +99,9 @@ export default function WakalahPage() {
                   <TableCell>{getStatusBadge(contract.status)}</TableCell>
                   <TableCell>
                     {format(new Date(contract.endDate), 'dd/MM/yyyy')}
+                  </TableCell>
+                   <TableCell className="text-right">
+                    <TransactionActions contract={contract} />
                   </TableCell>
                 </TableRow>
               ))}

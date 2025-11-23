@@ -22,6 +22,7 @@ import type { MudarabahContract } from '@/lib/types';
 import { format } from 'date-fns';
 import { useCollection, useFirestore, useMemoFirebase, useFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
+import { TransactionActions } from '@/components/transaction-actions';
 
 export default function MudarabahPage() {
   const firestore = useFirestore();
@@ -83,11 +84,12 @@ export default function MudarabahPage() {
                 <TableHead>رأس المال</TableHead>
                 <TableHead>الحالة</TableHead>
                 <TableHead>تاريخ الانتهاء</TableHead>
+                <TableHead className="text-right">إجراءات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading && <TableRow><TableCell colSpan={4}>جارِ التحميل...</TableCell></TableRow>}
-              {!isLoading && mudarabahContracts?.length === 0 && <TableRow><TableCell colSpan={4}>لا توجد عقود.</TableCell></TableRow>}
+              {isLoading && <TableRow><TableCell colSpan={5}>جارِ التحميل...</TableCell></TableRow>}
+              {!isLoading && mudarabahContracts?.length === 0 && <TableRow><TableCell colSpan={5}>لا توجد عقود.</TableCell></TableRow>}
               {mudarabahContracts?.map((contract) => (
                 <TableRow key={contract.id}>
                   <TableCell>{contract.clientName}</TableCell>
@@ -95,6 +97,9 @@ export default function MudarabahPage() {
                   <TableCell>{getStatusBadge(contract.status)}</TableCell>
                   <TableCell>
                     {format(new Date(contract.endDate), 'dd/MM/yyyy')}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <TransactionActions contract={contract} />
                   </TableCell>
                 </TableRow>
               ))}
