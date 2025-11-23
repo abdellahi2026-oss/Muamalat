@@ -467,48 +467,6 @@ export function AddTransactionDialog() {
                         </div>
                     </div>
                 )}
-                 <div className="space-y-4 rounded-md border p-4">
-                    <div className="flex items-center justify-between">
-                        <h4 className="font-medium">اقتراح ربح</h4>
-                         {isSuggesting && <Loader2 className="h-5 w-5 animate-spin" />}
-                    </div>
-
-                    {suggestions && (
-                         <div className="space-y-2">
-                             <Alert>
-                                <Wand2 className="h-4 w-4" />
-                                <AlertTitle>توصية</AlertTitle>
-                                <AlertDescription>
-                                    {suggestions.reasoning}
-                                </AlertDescription>
-                            </Alert>
-                           <FormField
-                                control={form.control}
-                                name="commodityCardId"
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>البطاقات المقترحة</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl>
-                                        <SelectTrigger>
-                                        <SelectValue placeholder="اختر بطاقة من الاقتراحات" />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        {suggestions.suggestedCards.map((card) => (
-                                            <SelectItem key={card} value={card}>
-                                                {card}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-                        </div>
-                    )}
-                 </div>
               </>
             )}
 
