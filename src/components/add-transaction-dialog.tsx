@@ -41,16 +41,20 @@ import {
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { collection, addDoc, doc, setDoc } from 'firebase/firestore';
-import { useFirebase, useFirestore } from '@/firebase';
+import { useFirebase, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { Calendar } from './ui/calendar';
 import { suggestCommodityCards, SuggestCommodityCardsOutput } from '@/ai/flows/commodity-card-suggestions';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { AnyContract, MurabahaContract, MudarabahContract, MusharakahContract, WakalahContract } from '@/lib/types';
+import { Combobox } from './ui/combobox';
 
 // A single, unified schema for all contract types.
 // Fields specific to one contract type are marked as optional.
 const formSchema = z.object({
   contractType: z.enum(['murabaha', 'mudarabah', 'musharakah', 'wakalah']),
-  clientName: z.string().min(3, { message: 'يجب أن يكون اسم العميل 3 أحرف على الأقل.' }),
+  clientName: z.string().min(1, { message: 'يجب اختيار عميل أو إضافة عميل جديد.' }),
+  newClientName: z.string().optional(),
+  newClientPhone: z.string().optional(),
   startDate: z.date({ required_error: 'يجب إدخال تاريخ البدء.' }),
   endDate: z.date({ required_error: 'يجب إدخال تاريخ الانتهاء.' }),
 
@@ -76,7 +80,16 @@ const formSchema = z.object({
   agentName: z.string().optional(),
   agencyType: z.string().optional(),
 
-}).refine((data) => { // Conditional validation for Murabaha
+}).refine(data => {
+    if (data.clientName === 'new-client') {
+        return !!data.newClientName && data.newClientName.length >= 3;
+    }
+    return true;
+}, {
+    message: 'يجب إدخال اسم العميل الجديد (3 أحرف على الأقل).',
+    path: ['newClientName'],
+})
+.refine((data) => { // Conditional validation for Murabaha
     if (data.contractType === 'murabaha') {
         return (
             !!data.goods && data.goods.length >= 2 &&
@@ -154,7 +167,49 @@ export function AddTransactionDialog() {
   });
   
   const contractType = form.watch('contractType');
+  const selectedClient = form.watch('clientName');
   const { units, purchasePrice, goods, sellingPrice } = form.watch();
+
+  const murabahaQuery = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return collection(firestore, 'clients', user.uid, 'murabahaContracts');
+  }, [firestore, user?.uid]);
+  const mudarabahQuery = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return collection(firestore, 'clients', user.uid, 'mudarabahContracts');
+  }, [firestore, user?.uid]);
+  const musharakahQuery = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return collection(firestore, 'clients', user.uid, 'musharakahContracts');
+  }, [firestore, user?.uid]);
+  const wakalahQuery = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return collection(firestore, 'clients', user.uid, 'wakalahContracts');
+  }, [firestore, user?.uid]);
+
+  const { data: murabahaContracts } = useCollection<MurabahaContract>(murabahaQuery);
+  const { data: mudarabahContracts } = useCollection<MudarabahContract>(mudarabahQuery);
+  const { data: musharakahContracts } = useCollection<MusharakahContract>(musharakahQuery);
+  const { data: wakalahContracts } = useCollection<WakalahContract>(wakalahQuery);
+
+  const clientOptions = useMemo(() => {
+    const allContracts: AnyContract[] = [
+        ...(murabahaContracts || []),
+        ...(mudarabahContracts || []),
+        ...(musharakahContracts || []),
+        ...(wakalahContracts || []),
+    ];
+
+    const uniqueClients = [...new Set(allContracts.map(c => c.clientName).filter(Boolean))];
+    const options = uniqueClients.map(client => ({
+      value: client,
+      label: client,
+    }));
+
+    // Add the "New Client" option
+    options.unshift({ value: 'new-client', label: 'إضافة عميل جديد' });
+    return options;
+  }, [murabahaContracts, mudarabahContracts, musharakahContracts, wakalahContracts]);
 
   // Automatically fetch suggestions when inputs are valid
   useEffect(() => {
@@ -205,6 +260,8 @@ export function AddTransactionDialog() {
       });
       return;
     }
+
+    const finalClientName = data.clientName === 'new-client' ? data.newClientName : data.clientName;
     
     let collectionName: string;
     let contractData: any = {
@@ -212,7 +269,8 @@ export function AddTransactionDialog() {
         status: 'active',
         startDate: data.startDate.toISOString(),
         endDate: data.endDate.toISOString(),
-        clientName: data.clientName,
+        clientName: finalClientName,
+        ...(data.clientName === 'new-client' && data.newClientPhone && { clientPhone: data.newClientPhone }),
     };
 
     switch (data.contractType) {
@@ -272,7 +330,7 @@ export function AddTransactionDialog() {
 
       toast({
         title: 'تمت إضافة المعاملة بنجاح!',
-        description: `تم إنشاء عقد جديد لـ ${data.clientName}.`,
+        description: `تم إنشاء عقد جديد لـ ${finalClientName}.`,
       });
 
       setOpen(false);
@@ -346,20 +404,55 @@ export function AddTransactionDialog() {
                 )}
             />
 
-
             <FormField
               control={form.control}
               name="clientName"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="flex flex-col">
                   <FormLabel>{contractType === 'musharakah' ? 'اسم المشروع' : 'اسم العميل'}</FormLabel>
-                  <FormControl>
-                    <Input {...field} value={field.value || ''} />
-                  </FormControl>
+                   <Combobox
+                        options={clientOptions}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="ابحث عن عميل أو أضف جديد..."
+                        notFoundText="لم يتم العثور على عميل."
+                    />
                   <FormMessage />
                 </FormItem>
               )}
             />
+
+            {selectedClient === 'new-client' && (
+                <div className="grid grid-cols-2 gap-4 rounded-md border bg-muted/50 p-4">
+                    <FormField
+                        control={form.control}
+                        name="newClientName"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>اسم العميل الجديد</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="الاسم الكامل للعميل" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                     <FormField
+                        control={form.control}
+                        name="newClientPhone"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>هاتف العميل</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="اختياري" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
+            )}
+
 
             {contractType === 'murabaha' && (
               <>
@@ -664,3 +757,6 @@ export function AddTransactionDialog() {
     </Dialog>
   );
 }
+
+
+    

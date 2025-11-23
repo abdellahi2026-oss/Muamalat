@@ -15,6 +15,7 @@ export type Contract = {
   id: string;
   clientId: string;
   clientName: string;
+  clientPhone?: string;
   startDate: string;
   endDate: string;
   status: ContractStatus;
@@ -64,5 +65,7 @@ export type CommodityCard = {
   issuingBody: string;
   status: 'available' | 'in-use' | 'expired';
 };
+
+    
 
     
