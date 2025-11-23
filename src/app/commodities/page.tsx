@@ -93,6 +93,7 @@ export default function CurrentTransactionsPage() {
   const { user } = useFirebase();
   const searchParams = useSearchParams();
   const searchQuery = searchParams.get('q');
+  const statusQuery = searchParams.get('status');
 
   const murabahaQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
@@ -132,11 +133,18 @@ export default function CurrentTransactionsPage() {
 
   const filteredContracts = useMemo(() => {
     if (!allContracts) return [];
-    if (!searchQuery) return allContracts;
+    
+    let filtered = allContracts;
+
+    if (statusQuery) {
+        filtered = filtered.filter(contract => contract.status === statusQuery);
+    }
+    
+    if (!searchQuery) return filtered;
 
     const lowercasedQuery = searchQuery.toLowerCase();
     
-    return allContracts.filter(contract => {
+    return filtered.filter(contract => {
         const clientNameMatch = contract.clientName?.toLowerCase().includes(lowercasedQuery);
         const typeMatch = getContractTypeArabic(contract.type).toLowerCase().includes(lowercasedQuery);
         let partnerMatch = false;
@@ -154,13 +162,27 @@ export default function CurrentTransactionsPage() {
 
         return clientNameMatch || typeMatch || partnerMatch || agentMatch;
     });
-  }, [allContracts, searchQuery]);
+  }, [allContracts, searchQuery, statusQuery]);
+
+  const pageTitle = useMemo(() => {
+    if (statusQuery === 'active') return 'المعاملات النشطة';
+    if (statusQuery === 'completed') return 'المعاملات المكتملة';
+    return 'المعاملات';
+  }, [statusQuery]);
+
+  const pageDescription = useMemo(() => {
+    if (searchQuery) return `نتائج البحث عن "${searchQuery}"`;
+    if (statusQuery === 'active') return 'جميع المعاملات التي حالتها نشطة حالياً.';
+    if (statusQuery === 'completed') return 'جميع المعاملات التي تم إكمالها.';
+    return 'جميع المعاملات التي قمت بها، الحالية والسابقة.';
+  }, [searchQuery, statusQuery]);
+
 
   return (
     <div className="space-y-6">
       <div className="space-y-1">
         <h1 className="font-headline text-3xl font-bold tracking-tight">
-          المعاملات
+          {pageTitle}
         </h1>
         <p className="text-muted-foreground">
           عرض جميع معاملاتك الحالية والسابقة.
@@ -170,7 +192,7 @@ export default function CurrentTransactionsPage() {
         <CardHeader>
           <CardTitle>قائمة المعاملات</CardTitle>
           <CardDescription>
-            {searchQuery ? `نتائج البحث عن "${searchQuery}"` : 'جميع المعاملات التي قمت بها.'}
+            {pageDescription}
           </CardDescription>
         </CardHeader>
         <CardContent>

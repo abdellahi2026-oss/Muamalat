@@ -39,6 +39,7 @@ import { collection, query, where, collectionGroup } from 'firebase/firestore';
 import { DateRangePicker } from '@/components/date-range-picker';
 import type { DateRange } from 'react-day-picker';
 import { subDays, addDays } from 'date-fns';
+import Link from 'next/link';
 
 
 export default function DashboardPage() {
@@ -224,54 +225,62 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي قيمة العقود</CardTitle>
-            <CircleDollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{isLoading ? '...' : formatCurrency(totalContractValue)}</div>
-            <p className="text-xs text-muted-foreground">
-              في الفترة المحددة
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">العقود النشطة</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{isLoading ? '...' : `+${activeContracts}`}</div>
-            <p className="text-xs text-muted-foreground">
-              من العقود التي بدأت في الفترة المحددة
-            </p>
-          </CardContent>
-        </Card>
-         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">الربح المتوقع</CardTitle>
-            <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{isLoading ? '...' : formatCurrency(expectedProfit)}</div>
-            <p className="text-xs text-muted-foreground">
-              من عقود المرابحة النشطة في الفترة
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">الأرباح المحققة</CardTitle>
-            <ArrowDownRight className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{isLoading ? '...' : formatCurrency(realizedProfit)}</div>
-            <p className="text-xs text-muted-foreground">
-             من عقود المرابحة المكتملة في الفترة
-            </p>
-          </CardContent>
-        </Card>
+        <Link href="/commodities">
+            <Card className='hover:bg-muted/50 transition-colors'>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">إجمالي قيمة العقود</CardTitle>
+                <CircleDollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold">{isLoading ? '...' : formatCurrency(totalContractValue)}</div>
+                <p className="text-xs text-muted-foreground">
+                في الفترة المحددة
+                </p>
+            </CardContent>
+            </Card>
+        </Link>
+        <Link href="/commodities?status=active">
+            <Card className='hover:bg-muted/50 transition-colors'>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">العقود النشطة</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold">{isLoading ? '...' : `+${activeContracts}`}</div>
+                <p className="text-xs text-muted-foreground">
+                من العقود التي بدأت في الفترة المحددة
+                </p>
+            </CardContent>
+            </Card>
+        </Link>
+         <Link href="/commodities">
+            <Card className='hover:bg-muted/50 transition-colors'>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">الربح المتوقع</CardTitle>
+                <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold">{isLoading ? '...' : formatCurrency(expectedProfit)}</div>
+                <p className="text-xs text-muted-foreground">
+                من عقود المرابحة النشطة في الفترة
+                </p>
+            </CardContent>
+            </Card>
+         </Link>
+        <Link href="/commodities?status=completed">
+            <Card className='hover:bg-muted/50 transition-colors'>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">الأرباح المحققة</CardTitle>
+                <ArrowDownRight className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold">{isLoading ? '...' : formatCurrency(realizedProfit)}</div>
+                <p className="text-xs text-muted-foreground">
+                من عقود المرابحة المكتملة في الفترة
+                </p>
+            </CardContent>
+            </Card>
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
@@ -356,5 +365,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
