@@ -58,7 +58,8 @@ const formSchema = z.object({
   goods: z.string().optional(),
   units: z.coerce.number().optional(),
   purchasePrice: z.coerce.number().optional(),
-  sellingPrice: z.coerce.number().optional(),
+  desiredProfit: z.coerce.number().optional(), // New field for desired profit
+  sellingPrice: z.coerce.number().optional(), // This will be calculated
   commodityCardId: z.string().optional(),
 
   // Mudarabah specific
@@ -82,13 +83,13 @@ const formSchema = z.object({
             !!data.goods && data.goods.length >= 2 &&
             data.units !== undefined && data.units > 0 &&
             data.purchasePrice !== undefined && data.purchasePrice > 0 &&
-            data.sellingPrice !== undefined && data.sellingPrice > data.purchasePrice
+            data.desiredProfit !== undefined && data.desiredProfit > 0
         );
     }
     return true;
 }, {
-    message: 'بيانات المرابحة غير كاملة أو غير صحيحة. سعر البيع يجب أن يكون أعلى من سعر الشراء.',
-    path: ['sellingPrice'], // This is a general path, specific errors would be better if needed.
+    message: 'بيانات المرابحة غير كاملة أو غير صحيحة. يجب إدخال الربح المطلوب.',
+    path: ['desiredProfit'], 
 })
 .refine(data => { // Conditional validation for Mudarabah
     if (data.contractType === 'mudarabah') {
@@ -142,6 +143,7 @@ export function AddTransactionDialog() {
       goods: '',
       units: undefined,
       purchasePrice: undefined,
+      desiredProfit: undefined,
       sellingPrice: undefined,
       capital: undefined,
       profitSharingRatio: 50,
@@ -154,44 +156,53 @@ export function AddTransactionDialog() {
   });
   
   const contractType = form.watch('contractType');
-    const { units, purchasePrice, sellingPrice, goods } = form.watch();
+  const { units, purchasePrice, goods, desiredProfit } = form.watch();
 
-  const handleGetSuggestions = async () => {
-      const contractDetails = `
-        Goods: ${goods},
-        Units: ${units},
-        Purchase Price: ${purchasePrice},
-        Selling Price: ${sellingPrice},
-        Total Value: ${(sellingPrice || 0) * (units || 0)}
-      `;
+  const calculatedSellingPrice = useMemo(() => {
+    if (units && purchasePrice && desiredProfit) {
+        const totalPurchasePrice = purchasePrice * units;
+        const totalSellingPrice = totalPurchasePrice + desiredProfit;
+        return totalSellingPrice / units;
+    }
+    return null;
+  }, [units, purchasePrice, desiredProfit]);
 
-      if (!sellingPrice || !units) {
-          toast({
-              variant: 'destructive',
-              title: 'معلومات غير كافية',
-              description: 'الرجاء إدخال السلعة والكمية وسعر البيع للحصول على اقتراحات.'
-          });
-          return;
-      }
+  // Automatically fetch suggestions when inputs are valid
+  useEffect(() => {
+    if (contractType === 'murabaha' && units && purchasePrice && desiredProfit && goods) {
+        const handleGetSuggestions = async () => {
+            const totalSellingPrice = (calculatedSellingPrice || 0) * units;
+             const contractDetails = `
+                Goods: ${goods},
+                Units: ${units},
+                Purchase Price: ${purchasePrice},
+                Total Value: ${totalSellingPrice}
+            `;
 
-      setIsSuggesting(true);
-      setSuggestions(null);
-      try {
-          const result = await suggestCommodityCards({
-              contractType: 'Murabaha',
-              contractDetails: contractDetails
-          });
-          setSuggestions(result);
-      } catch (error) {
-          console.error("Error getting suggestions:", error);
-          toast({
-              variant: 'destructive',
-              title: 'فشل جلب الاقتراحات'
-          });
-      } finally {
-          setIsSuggesting(false);
-      }
-  };
+            if (!totalSellingPrice) return;
+
+            setIsSuggesting(true);
+            setSuggestions(null);
+            try {
+                const result = await suggestCommodityCards({
+                    contractType: 'Murabaha',
+                    contractDetails: contractDetails
+                });
+                setSuggestions(result);
+            } catch (error) {
+                console.error("Error getting suggestions:", error);
+                toast({
+                    variant: 'destructive',
+                    title: 'فشل جلب الاقتراحات'
+                });
+            } finally {
+                setIsSuggesting(false);
+            }
+        };
+
+        handleGetSuggestions();
+    }
+  }, [units, purchasePrice, desiredProfit, goods, contractType, calculatedSellingPrice, toast]);
 
 
   const onSubmit = async (data: FormValues) => {
@@ -204,6 +215,12 @@ export function AddTransactionDialog() {
       return;
     }
     
+    // Recalculate selling price just to be safe
+    const finalSellingPrice = (data.purchasePrice && data.units && data.desiredProfit)
+      ? ((data.purchasePrice * data.units) + data.desiredProfit) / data.units
+      : data.sellingPrice;
+
+
     let collectionName: string;
     let contractData: any = {
         clientId: user.uid,
@@ -215,6 +232,10 @@ export function AddTransactionDialog() {
 
     switch (data.contractType) {
         case 'murabaha':
+            if (!finalSellingPrice) {
+                 toast({ variant: 'destructive', title: 'خطأ', description: 'لا يمكن حساب سعر البيع.' });
+                 return;
+            }
             collectionName = 'murabahaContracts';
             contractData = {
                 ...contractData,
@@ -222,8 +243,8 @@ export function AddTransactionDialog() {
                 goods: data.goods,
                 units: data.units,
                 purchasePrice: data.purchasePrice,
-                sellingPrice: data.sellingPrice,
-                amount: (data.sellingPrice || 0) * (data.units || 0),
+                sellingPrice: finalSellingPrice,
+                amount: finalSellingPrice * (data.units || 0),
                 paymentMethod: 'أقساط شهرية',
                 commodityCardId: data.commodityCardId,
             };
@@ -275,6 +296,7 @@ export function AddTransactionDialog() {
 
       setOpen(false);
       form.reset();
+      setSuggestions(null);
     } catch (error) {
       console.error('Error adding document: ', error);
       toast({
@@ -285,10 +307,6 @@ export function AddTransactionDialog() {
     }
   };
 
-    const totalProfit =
-    units && purchasePrice && sellingPrice && units > 0 && purchasePrice > 0 && sellingPrice > 0
-        ? (sellingPrice - purchasePrice) * units
-        : null;
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('fr-FR', {
@@ -324,7 +342,12 @@ export function AddTransactionDialog() {
                 render={({ field }) => (
                 <FormItem>
                     <FormLabel>نوع العقد</FormLabel>
-                    <Select onValueChange={(value) => field.onChange(value as FormValues['contractType'])} value={field.value}>
+                    <Select onValueChange={(value) => {
+                        field.onChange(value as FormValues['contractType']);
+                        setSuggestions(null); // Clear suggestions on type change
+                        form.reset(); // Reset form to clear old values
+                        form.setValue('contractType', value as FormValues['contractType']);
+                    }} value={field.value}>
                         <FormControl>
                         <SelectTrigger>
                             <SelectValue placeholder="اختر نوع العقد" />
@@ -350,7 +373,7 @@ export function AddTransactionDialog() {
                 <FormItem>
                   <FormLabel>{contractType === 'musharakah' ? 'اسم المشروع' : 'اسم العميل'}</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} value={field.value || ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -372,7 +395,8 @@ export function AddTransactionDialog() {
                         </FormItem>
                     )}
                     />
-                    <FormField
+                <div className="grid grid-cols-2 gap-4">
+                     <FormField
                     control={form.control}
                     name="units"
                     render={({ field }) => (
@@ -385,7 +409,6 @@ export function AddTransactionDialog() {
                         </FormItem>
                     )}
                     />
-                <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="purchasePrice"
@@ -399,24 +422,31 @@ export function AddTransactionDialog() {
                       </FormItem>
                     )}
                   />
-                  <FormField
+                </div>
+                 <FormField
                     control={form.control}
-                    name="sellingPrice"
+                    name="desiredProfit"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>سعر البيع للقطعة</FormLabel>
+                        <FormLabel>الربح الإجمالي المطلوب</FormLabel>
                         <FormControl>
-                          <Input type="number" {...field} value={field.value || ''} />
+                          <Input type="number" placeholder="أدخل مبلغ الربح" {...field} value={field.value || ''} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                </div>
-                 {totalProfit !== null && (
-                    <div className="rounded-md border bg-muted p-3 text-sm">
-                        <span className="text-muted-foreground">الربح الإجمالي: </span>
-                        <span className="font-semibold">{formatCurrency(totalProfit)}</span>
+
+                 {calculatedSellingPrice !== null && (
+                    <div className="grid grid-cols-2 gap-4 rounded-md border bg-muted p-3 text-sm">
+                        <div>
+                            <span className="text-muted-foreground">إجمالي البيع: </span>
+                            <span className="font-semibold">{formatCurrency(calculatedSellingPrice * (units || 0))}</span>
+                        </div>
+                         <div>
+                            <span className="text-muted-foreground">سعر البيع للقطعة: </span>
+                            <span className="font-semibold">{formatCurrency(calculatedSellingPrice)}</span>
+                        </div>
                     </div>
                 )}
                  <div className="space-y-4 rounded-md border p-4">
@@ -424,18 +454,16 @@ export function AddTransactionDialog() {
                         <div>
                             <h4 className="font-medium">اقتراح بطاقة سلعية</h4>
                             <p className="text-sm text-muted-foreground">
-                                احصل على اقتراحات لبطاقات سلع مناسبة لقيمة العقد.
+                                يتم البحث عن بطاقات تلقائيًا عند إدخال تفاصيل العقد.
                             </p>
                         </div>
-                        <Button type="button" size="sm" onClick={handleGetSuggestions} disabled={isSuggesting}>
-                            {isSuggesting ? <Loader2 className="h-4 w-4 animate-spin me-2" /> : <Wand2 className="h-4 w-4 me-2" />}
-                            {isSuggesting ? 'جاري...' : 'اقترح'}
-                        </Button>
+                         {isSuggesting && <Loader2 className="h-5 w-5 animate-spin" />}
                     </div>
-                    {isSuggesting && <div className="text-center text-sm text-muted-foreground">جاري البحث عن بطاقات مناسبة...</div>}
+
                     {suggestions && (
                          <div className="space-y-2">
                              <Alert>
+                                <Wand2 className="h-4 w-4" />
                                 <AlertTitle>توصية</AlertTitle>
                                 <AlertDescription>
                                     {suggestions.reasoning}
