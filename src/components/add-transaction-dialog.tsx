@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -703,5 +703,3 @@ export function AddTransactionDialog() {
     </Dialog>
   );
 }
-
-    
