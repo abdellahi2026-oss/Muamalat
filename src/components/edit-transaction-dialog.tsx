@@ -56,7 +56,6 @@ const formSchema = z.object({
   units: z.coerce.number().optional(),
   purchasePrice: z.coerce.number().optional(),
   sellingPrice: z.coerce.number().optional(),
-  desiredProfit: z.coerce.number().optional(),
 
   // Mudarabah specific
   capital: z.coerce.number().optional(),
@@ -87,22 +86,16 @@ interface EditTransactionDialogProps {
 export function EditTransactionDialog({ isOpen, setIsOpen, contract }: EditTransactionDialogProps) {
   const { toast } = useToast();
   const { firestore, user } = useFirebase();
-  const [lastEditedField, setLastEditedField] = useState<'profit' | 'price' | null>(null);
 
   const defaultValues = useMemo(() => {
-    const murabahaContract = contract.type === 'murabaha' ? (contract as MurabahaContract) : null;
     const mudarabahRatio = contract.type === 'mudarabah' ? (contract as MudarabahContract).profitSharingRatio.manager : 50;
-    const desiredProfit = murabahaContract 
-        ? (murabahaContract.sellingPrice - murabahaContract.purchasePrice) * murabahaContract.units
-        : undefined;
-
+    
     return {
         ...contract,
         contractType: contract.type,
         startDate: new Date(contract.startDate),
         endDate: new Date(contract.endDate),
         profitSharingRatio: mudarabahRatio,
-        desiredProfit: desiredProfit
     };
   }, [contract]);
 
@@ -111,42 +104,23 @@ export function EditTransactionDialog({ isOpen, setIsOpen, contract }: EditTrans
     defaultValues: defaultValues
   });
   
-  const { units, purchasePrice, sellingPrice, desiredProfit } = form.watch();
+  const { units, purchasePrice, sellingPrice } = form.watch();
 
   // When the dialog is opened with a new contract, reset the form
   useEffect(() => {
     if (isOpen) {
-        const murabahaContract = contract.type === 'murabaha' ? (contract as MurabahaContract) : null;
         const mudarabahRatio = contract.type === 'mudarabah' ? (contract as MudarabahContract).profitSharingRatio.manager : 50;
-        const profit = murabahaContract 
-            ? (murabahaContract.sellingPrice - murabahaContract.purchasePrice) * murabahaContract.units
-            : undefined;
-
+        
         form.reset({
             ...contract,
             contractType: contract.type,
             startDate: new Date(contract.startDate),
             endDate: new Date(contract.endDate),
             profitSharingRatio: mudarabahRatio,
-            desiredProfit: profit,
         });
-        setLastEditedField(null);
     }
   }, [isOpen, contract, form]);
   
-  // Recalculate profit or selling price based on which was edited last
-  useEffect(() => {
-    if (contract.type === 'murabaha' && units && purchasePrice) {
-      if (lastEditedField === 'price' && sellingPrice) {
-        const totalProfit = (sellingPrice - purchasePrice) * units;
-        form.setValue('desiredProfit', totalProfit, { shouldValidate: true });
-      } else if (lastEditedField === 'profit' && desiredProfit !== undefined) {
-        const calculatedSellingPrice = ((purchasePrice * units) + desiredProfit) / units;
-        form.setValue('sellingPrice', calculatedSellingPrice, { shouldValidate: true });
-      }
-    }
-  }, [units, purchasePrice, sellingPrice, desiredProfit, lastEditedField, form, contract.type]);
-
   const contractType = form.watch('contractType');
 
   const getCollectionName = (type: AnyContract['type']) => {
@@ -176,14 +150,6 @@ export function EditTransactionDialog({ isOpen, setIsOpen, contract }: EditTrans
         startDate: data.startDate.toISOString(),
         endDate: data.endDate.toISOString(),
     };
-    
-    let finalSellingPrice = data.sellingPrice;
-    if (data.contractType === 'murabaha') {
-        if (lastEditedField === 'profit' && data.purchasePrice && data.units && data.desiredProfit !== undefined) {
-            finalSellingPrice = ((data.purchasePrice * data.units) + data.desiredProfit) / data.units;
-        }
-    }
-
 
     switch (data.contractType) {
         case 'murabaha':
@@ -192,8 +158,8 @@ export function EditTransactionDialog({ isOpen, setIsOpen, contract }: EditTrans
                 goods: data.goods,
                 units: data.units,
                 purchasePrice: data.purchasePrice,
-                sellingPrice: finalSellingPrice,
-                amount: (finalSellingPrice || 0) * (data.units || 0),
+                sellingPrice: data.sellingPrice,
+                amount: (data.sellingPrice || 0) * (data.units || 0),
             };
             break;
         case 'mudarabah':
@@ -302,7 +268,7 @@ export function EditTransactionDialog({ isOpen, setIsOpen, contract }: EditTrans
                         </FormItem>
                     )}
                     />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                     <FormField
                     control={form.control}
                     name="units"
@@ -321,7 +287,7 @@ export function EditTransactionDialog({ isOpen, setIsOpen, contract }: EditTrans
                     name="purchasePrice"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>سعر الشراء للقطعة</FormLabel>
+                        <FormLabel>سعر الشراء</FormLabel>
                         <FormControl>
                           <Input type="number" {...field} value={field.value || ''} />
                         </FormControl>
@@ -329,29 +295,14 @@ export function EditTransactionDialog({ isOpen, setIsOpen, contract }: EditTrans
                       </FormItem>
                     )}
                   />
-                </div>
-                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="sellingPrice"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>سعر البيع للقطعة</FormLabel>
+                        <FormLabel>سعر البيع</FormLabel>
                         <FormControl>
-                          <Input type="number" {...field} value={field.value || ''} onFocus={() => setLastEditedField('price')} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                   <FormField
-                    control={form.control}
-                    name="desiredProfit"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>الربح الإجمالي</FormLabel>
-                        <FormControl>
-                          <Input type="number" {...field} value={field.value || ''} onFocus={() => setLastEditedField('profit')} />
+                          <Input type="number" {...field} value={field.value || ''} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
