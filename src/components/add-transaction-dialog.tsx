@@ -88,7 +88,7 @@ const formSchema = z.object({
     }
     return true;
 }, {
-    message: 'بيانات المرابحة غير كاملة. يجب إدخال سعر البيع أو الربح المطلوب.',
+    message: 'بيانات المرابحة غير كاملة. يجب إدخال سعر البيع أو الربح الإجمالي.',
     path: ['sellingPrice'], 
 })
 .refine(data => { // Conditional validation for Mudarabah
@@ -718,4 +718,6 @@ export function AddTransactionDialog() {
 }
 
     
+    
+
     
