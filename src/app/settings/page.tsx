@@ -169,7 +169,7 @@ export default function SettingsPage() {
                                 <FormItem>
                                     <FormLabel>البريد الإلكتروني</FormLabel>
                                     <FormControl>
-                                    <Input {...field} readOnly disabled />
+                                    <Input {...field} readOnly disabled className="text-left" dir="ltr" />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>

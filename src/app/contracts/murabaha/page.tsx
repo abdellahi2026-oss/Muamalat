@@ -86,12 +86,12 @@ export default function MurabahaPage() {
                 <TableHead>سعر البيع الإجمالي</TableHead>
                 <TableHead>الحالة</TableHead>
                 <TableHead>تاريخ الانتهاء</TableHead>
-                <TableHead className="text-right">إجراءات</TableHead>
+                <TableHead className="text-left">إجراءات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading && <TableRow><TableCell colSpan={7}>جارِ التحميل...</TableCell></TableRow>}
-              {!isLoading && murabahaContracts?.length === 0 && <TableRow><TableCell colSpan={7}>لا توجد عقود.</TableCell></TableRow>}
+              {isLoading && <TableRow><TableCell colSpan={7} className="text-center">جارِ التحميل...</TableCell></TableRow>}
+              {!isLoading && murabahaContracts?.length === 0 && <TableRow><TableCell colSpan={7} className="text-center">لا توجد عقود.</TableCell></TableRow>}
               {murabahaContracts?.map((contract) => (
                 <TableRow key={contract.id}>
                   <TableCell>{contract.clientName}</TableCell>
@@ -102,7 +102,7 @@ export default function MurabahaPage() {
                   <TableCell>
                     {format(new Date(contract.endDate), 'dd/MM/yyyy')}
                   </TableCell>
-                   <TableCell className="text-right">
+                   <TableCell className="text-left">
                     <TransactionActions contract={contract} />
                   </TableCell>
                 </TableRow>

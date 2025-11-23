@@ -165,7 +165,7 @@ export default function UsersPage() {
                 <TableHead>الدور</TableHead>
                 <TableHead>الحالة</TableHead>
                 <TableHead>آخر تسجيل دخول</TableHead>
-                <TableHead className="text-right">إجراءات</TableHead>
+                <TableHead className="text-left">إجراءات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -181,11 +181,11 @@ export default function UsersPage() {
               {!areUsersLoading && !usersError && users?.map((u) => (
                 <TableRow key={u.id}>
                   <TableCell>{u.name}</TableCell>
-                  <TableCell>{u.email}</TableCell>
+                  <TableCell className="text-left" dir="ltr">{u.email}</TableCell>
                   <TableCell>{getRoleBadge(u.role)}</TableCell>
                   <TableCell>{getStatusBadge(u.status)}</TableCell>
                   <TableCell>{formatLastSignIn(u.lastSignInTime)}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-left">
                     {updatingUsers.includes(u.id) ? (
                         <Loader2 className="h-5 w-5 animate-spin ms-auto" />
                     ) : (

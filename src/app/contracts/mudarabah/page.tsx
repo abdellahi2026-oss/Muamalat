@@ -84,12 +84,12 @@ export default function MudarabahPage() {
                 <TableHead>رأس المال</TableHead>
                 <TableHead>الحالة</TableHead>
                 <TableHead>تاريخ الانتهاء</TableHead>
-                <TableHead className="text-right">إجراءات</TableHead>
+                <TableHead className="text-left">إجراءات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading && <TableRow><TableCell colSpan={5}>جارِ التحميل...</TableCell></TableRow>}
-              {!isLoading && mudarabahContracts?.length === 0 && <TableRow><TableCell colSpan={5}>لا توجد عقود.</TableCell></TableRow>}
+              {isLoading && <TableRow><TableCell colSpan={5} className="text-center">جارِ التحميل...</TableCell></TableRow>}
+              {!isLoading && mudarabahContracts?.length === 0 && <TableRow><TableCell colSpan={5} className="text-center">لا توجد عقود.</TableCell></TableRow>}
               {mudarabahContracts?.map((contract) => (
                 <TableRow key={contract.id}>
                   <TableCell>{contract.clientName}</TableCell>
@@ -98,7 +98,7 @@ export default function MudarabahPage() {
                   <TableCell>
                     {format(new Date(contract.endDate), 'dd/MM/yyyy')}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-left">
                     <TransactionActions contract={contract} />
                   </TableCell>
                 </TableRow>

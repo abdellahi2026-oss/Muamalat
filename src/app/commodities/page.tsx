@@ -183,7 +183,7 @@ export default function CurrentTransactionsPage() {
                 <TableHead>الربح</TableHead>
                 <TableHead>الحالة</TableHead>
                  <TableHead>تاريخ الانتهاء</TableHead>
-                 <TableHead className="text-right">إجراءات</TableHead>
+                 <TableHead className="text-left">إجراءات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -205,7 +205,7 @@ export default function CurrentTransactionsPage() {
                   <TableCell>
                     {contract.endDate ? format(new Date(contract.endDate), 'dd/MM/yyyy') : 'N/A'}
                   </TableCell>
-                   <TableCell className="text-right">
+                   <TableCell className="text-left">
                     <TransactionActions contract={contract} />
                   </TableCell>
                 </TableRow>

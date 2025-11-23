@@ -312,8 +312,8 @@ export default function DashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading && <TableRow><TableCell colSpan={3}>جارِ التحميل...</TableCell></TableRow>}
-                {!isLoading && attentionContracts.length === 0 && <TableRow><TableCell colSpan={3}>لا توجد عقود.</TableCell></TableRow>}
+                {isLoading && <TableRow><TableCell colSpan={3} className="text-center">جارِ التحميل...</TableCell></TableRow>}
+                {!isLoading && attentionContracts.length === 0 && <TableRow><TableCell colSpan={3} className="text-center">لا توجد عقود.</TableCell></TableRow>}
                 {!isLoading && attentionContracts.map((contract) => (
                   <TableRow key={contract.id}>
                     <TableCell>
@@ -336,7 +336,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
-
-    
