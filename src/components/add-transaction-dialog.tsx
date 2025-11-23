@@ -77,9 +77,9 @@ const formSchema = z.object({
     if (data.contractType === 'murabaha') {
         return (
             !!data.goods && data.goods.length >= 2 &&
-            !!data.units && data.units > 0 &&
-            !!data.purchasePrice && data.purchasePrice > 0 &&
-            !!data.sellingPrice && data.sellingPrice > data.purchasePrice
+            data.units !== undefined && data.units > 0 &&
+            data.purchasePrice !== undefined && data.purchasePrice > 0 &&
+            data.sellingPrice !== undefined && data.sellingPrice > data.purchasePrice
         );
     }
     return true;
@@ -90,8 +90,8 @@ const formSchema = z.object({
 .refine(data => { // Conditional validation for Mudarabah
     if (data.contractType === 'mudarabah') {
         return (
-            !!data.capital && data.capital > 0 &&
-            !!data.profitSharingRatio && data.profitSharingRatio >= 1 && data.profitSharingRatio <= 99 &&
+            data.capital !== undefined && data.capital > 0 &&
+            data.profitSharingRatio !== undefined && data.profitSharingRatio >= 1 && data.profitSharingRatio <= 99 &&
             !!data.investmentArea && data.investmentArea.length >= 3
         );
     }
@@ -100,7 +100,7 @@ const formSchema = z.object({
 .refine(data => { // Conditional validation for Musharakah
     if (data.contractType === 'musharakah') {
         return (
-            !!data.amount && data.amount > 0 &&
+            data.amount !== undefined && data.amount > 0 &&
             !!data.profitDistribution && data.profitDistribution.length >= 3
         );
     }
@@ -110,7 +110,7 @@ const formSchema = z.object({
     if (data.contractType === 'wakalah') {
         return (
             !!data.agentName && data.agentName.length >= 3 &&
-            !!data.amount && data.amount > 0 &&
+            data.amount !== undefined && data.amount > 0 &&
             !!data.agencyType && data.agencyType.length >= 3
         );
     }
@@ -138,10 +138,10 @@ export function AddTransactionDialog() {
       units: undefined,
       purchasePrice: undefined,
       sellingPrice: undefined,
-      capital: 0,
+      capital: undefined,
       profitSharingRatio: 50,
       investmentArea: '',
-      amount: 0,
+      amount: undefined,
       profitDistribution: '',
       agentName: '',
       agencyType: '',
@@ -323,7 +323,7 @@ export function AddTransactionDialog() {
                         <FormItem>
                         <FormLabel>السلعة</FormLabel>
                         <FormControl>
-                            <Input placeholder="مثال: أسمنت، حديد..." {...field} />
+                            <Input placeholder="مثال: أسمنت، حديد..." {...field} value={field.value || ''}/>
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -336,7 +336,7 @@ export function AddTransactionDialog() {
                         <FormItem>
                         <FormLabel>الكمية</FormLabel>
                         <FormControl>
-                            <Input type="number" {...field} />
+                            <Input type="number" {...field} value={field.value || ''} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -350,7 +350,7 @@ export function AddTransactionDialog() {
                       <FormItem>
                         <FormLabel>سعر الشراء للقطعة</FormLabel>
                         <FormControl>
-                          <Input type="number" {...field} />
+                          <Input type="number" {...field} value={field.value || ''} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -363,7 +363,7 @@ export function AddTransactionDialog() {
                       <FormItem>
                         <FormLabel>سعر البيع للقطعة</FormLabel>
                         <FormControl>
-                          <Input type="number" {...field} />
+                          <Input type="number" {...field} value={field.value || ''} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -387,7 +387,7 @@ export function AddTransactionDialog() {
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>رأس المال</FormLabel>
-                                <FormControl><Input type="number" {...field} /></FormControl>
+                                <FormControl><Input type="number" {...field} value={field.value || ''} /></FormControl>
                                 <FormMessage />
                             </FormItem>
                         )}
@@ -398,7 +398,7 @@ export function AddTransactionDialog() {
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>نسبة ربح المضارب (%)</FormLabel>
-                                <FormControl><Input type="number" {...field} /></FormControl>
+                                <FormControl><Input type="number" {...field} value={field.value || ''} /></FormControl>
                                 <FormMessage />
                             </FormItem>
                         )}
@@ -409,7 +409,7 @@ export function AddTransactionDialog() {
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>مجال الاستثمار</FormLabel>
-                                <FormControl><Input {...field} /></FormControl>
+                                <FormControl><Input {...field} value={field.value || ''} /></FormControl>
                                 <FormMessage />
                             </FormItem>
                         )}
@@ -425,7 +425,7 @@ export function AddTransactionDialog() {
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>إجمالي المساهمة</FormLabel>
-                                <FormControl><Input type="number" {...field} /></FormControl>
+                                <FormControl><Input type="number" {...field} value={field.value || ''} /></FormControl>
                                 <FormMessage />
                             </FormItem>
                         )}
@@ -436,7 +436,7 @@ export function AddTransactionDialog() {
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>توزيع الأرباح</FormLabel>
-                                <FormControl><Input placeholder="مثال: حسب نسبة رأس المال" {...field} /></FormControl>
+                                <FormControl><Input placeholder="مثال: حسب نسبة رأس المال" {...field} value={field.value || ''} /></FormControl>
                                 <FormMessage />
                             </FormItem>
                         )}
@@ -452,7 +452,7 @@ export function AddTransactionDialog() {
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>اسم الوكيل</FormLabel>
-                                <FormControl><Input {...field} /></FormControl>
+                                <FormControl><Input {...field} value={field.value || ''} /></FormControl>
                                 <FormMessage />
                             </FormItem>
                         )}
@@ -463,7 +463,7 @@ export function AddTransactionDialog() {
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>رسوم الوكالة</FormLabel>
-                                <FormControl><Input type="number" {...field} /></FormControl>
+                                <FormControl><Input type="number" {...field} value={field.value || ''} /></FormControl>
                                 <FormMessage />
                             </FormItem>
                         )}
@@ -474,7 +474,7 @@ export function AddTransactionDialog() {
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>نوع الوكالة</FormLabel>
-                                <FormControl><Input placeholder="مثال: وكالة خاصة لإدارة العقارات" {...field} /></FormControl>
+                                <FormControl><Input placeholder="مثال: وكالة خاصة لإدارة العقارات" {...field} value={field.value || ''} /></FormControl>
                                 <FormMessage />
                             </FormItem>
                         )}

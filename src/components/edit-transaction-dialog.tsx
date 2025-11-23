@@ -269,7 +269,7 @@ export function EditTransactionDialog({ isOpen, setIsOpen, contract }: EditTrans
                         <FormItem>
                         <FormLabel>السلعة</FormLabel>
                         <FormControl>
-                            <Input placeholder="مثال: أسمنت، حديد..." {...field} />
+                            <Input placeholder="مثال: أسمنت، حديد..." {...field} value={field.value || ''} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -282,7 +282,7 @@ export function EditTransactionDialog({ isOpen, setIsOpen, contract }: EditTrans
                         <FormItem>
                         <FormLabel>الكمية</FormLabel>
                         <FormControl>
-                            <Input type="number" {...field} />
+                            <Input type="number" {...field} value={field.value || ''} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -296,7 +296,7 @@ export function EditTransactionDialog({ isOpen, setIsOpen, contract }: EditTrans
                       <FormItem>
                         <FormLabel>سعر الشراء للقطعة</FormLabel>
                         <FormControl>
-                          <Input type="number" {...field} />
+                          <Input type="number" {...field} value={field.value || ''} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -309,7 +309,7 @@ export function EditTransactionDialog({ isOpen, setIsOpen, contract }: EditTrans
                       <FormItem>
                         <FormLabel>سعر البيع للقطعة</FormLabel>
                         <FormControl>
-                          <Input type="number" {...field} />
+                          <Input type="number" {...field} value={field.value || ''} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -333,7 +333,7 @@ export function EditTransactionDialog({ isOpen, setIsOpen, contract }: EditTrans
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>رأس المال</FormLabel>
-                                <FormControl><Input type="number" {...field} /></FormControl>
+                                <FormControl><Input type="number" {...field} value={field.value || ''} /></FormControl>
                                 <FormMessage />
                             </FormItem>
                         )}
@@ -344,7 +344,7 @@ export function EditTransactionDialog({ isOpen, setIsOpen, contract }: EditTrans
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>نسبة ربح المضارب (%)</FormLabel>
-                                <FormControl><Input type="number" {...field} /></FormControl>
+                                <FormControl><Input type="number" {...field} value={field.value || ''} /></FormControl>
                                 <FormMessage />
                             </FormItem>
                         )}
@@ -355,7 +355,7 @@ export function EditTransactionDialog({ isOpen, setIsOpen, contract }: EditTrans
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>مجال الاستثمار</FormLabel>
-                                <FormControl><Input {...field} /></FormControl>
+                                <FormControl><Input {...field} value={field.value || ''} /></FormControl>
                                 <FormMessage />
                             </FormItem>
                         )}
@@ -371,7 +371,7 @@ export function EditTransactionDialog({ isOpen, setIsOpen, contract }: EditTrans
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>إجمالي المساهمة</FormLabel>
-                                <FormControl><Input type="number" {...field} /></FormControl>
+                                <FormControl><Input type="number" {...field} value={field.value || ''} /></FormControl>
                                 <FormMessage />
                             </FormItem>
                         )}
@@ -382,7 +382,7 @@ export function EditTransactionDialog({ isOpen, setIsOpen, contract }: EditTrans
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>توزيع الأرباح</FormLabel>
-                                <FormControl><Input placeholder="مثال: حسب نسبة رأس المال" {...field} /></FormControl>
+                                <FormControl><Input placeholder="مثال: حسب نسبة رأس المال" {...field} value={field.value || ''} /></FormControl>
                                 <FormMessage />
                             </FormItem>
                         )}
@@ -398,7 +398,7 @@ export function EditTransactionDialog({ isOpen, setIsOpen, contract }: EditTrans
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>اسم الوكيل</FormLabel>
-                                <FormControl><Input {...field} /></FormControl>
+                                <FormControl><Input {...field} value={field.value || ''} /></FormControl>
                                 <FormMessage />
                             </FormItem>
                         )}
@@ -409,7 +409,7 @@ export function EditTransactionDialog({ isOpen, setIsOpen, contract }: EditTrans
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>رسوم الوكالة</FormLabel>
-                                <FormControl><Input type="number" {...field} /></FormControl>
+                                <FormControl><Input type="number" {...field} value={field.value || ''} /></FormControl>
                                 <FormMessage />
                             </FormItem>
                         )}
@@ -420,7 +420,7 @@ export function EditTransactionDialog({ isOpen, setIsOpen, contract }: EditTrans
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>نوع الوكالة</FormLabel>
-                                <FormControl><Input placeholder="مثال: وكالة خاصة لإدارة العقارات" {...field} /></FormControl>
+                                <FormControl><Input placeholder="مثال: وكالة خاصة لإدارة العقارات" {...field} value={field.value || ''} /></FormControl>
                                 <FormMessage />
                             </FormItem>
                         )}
@@ -526,3 +526,5 @@ export function EditTransactionDialog({ isOpen, setIsOpen, contract }: EditTrans
     </Dialog>
   );
 }
+
+    
