@@ -28,6 +28,7 @@ export type MurabahaContract = Contract & {
   purchasePrice: number;
   sellingPrice: number;
   paymentMethod: string;
+  commodityCardId?: string;
 };
 
 export type MudarabahContract = Contract & {
@@ -63,3 +64,5 @@ export type CommodityCard = {
   issuingBody: string;
   status: 'available' | 'in-use' | 'expired';
 };
+
+    

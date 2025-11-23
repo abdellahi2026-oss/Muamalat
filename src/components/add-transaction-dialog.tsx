@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -31,7 +31,7 @@ import {
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { PlusCircle, Calendar as CalendarIcon, Loader2 } from 'lucide-react';
+import { PlusCircle, Calendar as CalendarIcon, Loader2, Wand2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Popover,
@@ -43,6 +43,8 @@ import { format } from 'date-fns';
 import { collection, addDoc, doc, setDoc } from 'firebase/firestore';
 import { useFirebase, useFirestore } from '@/firebase';
 import { Calendar } from './ui/calendar';
+import { suggestCommodityCards, SuggestCommodityCardsOutput } from '@/ai/flows/commodity-card-suggestions';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 // A single, unified schema for all contract types.
 // Fields specific to one contract type are marked as optional.
@@ -57,6 +59,7 @@ const formSchema = z.object({
   units: z.coerce.number().optional(),
   purchasePrice: z.coerce.number().optional(),
   sellingPrice: z.coerce.number().optional(),
+  commodityCardId: z.string().optional(),
 
   // Mudarabah specific
   capital: z.coerce.number().optional(),
@@ -126,6 +129,8 @@ export function AddTransactionDialog() {
   const { toast } = useToast();
   const firestore = useFirestore();
   const { user } = useFirebase();
+  const [suggestions, setSuggestions] = useState<SuggestCommodityCardsOutput | null>(null);
+  const [isSuggesting, setIsSuggesting] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -149,6 +154,45 @@ export function AddTransactionDialog() {
   });
   
   const contractType = form.watch('contractType');
+    const { units, purchasePrice, sellingPrice, goods } = form.watch();
+
+  const handleGetSuggestions = async () => {
+      const contractDetails = `
+        Goods: ${goods},
+        Units: ${units},
+        Purchase Price: ${purchasePrice},
+        Selling Price: ${sellingPrice},
+        Total Value: ${(sellingPrice || 0) * (units || 0)}
+      `;
+
+      if (!sellingPrice || !units) {
+          toast({
+              variant: 'destructive',
+              title: 'معلومات غير كافية',
+              description: 'الرجاء إدخال السلعة والكمية وسعر البيع للحصول على اقتراحات.'
+          });
+          return;
+      }
+
+      setIsSuggesting(true);
+      setSuggestions(null);
+      try {
+          const result = await suggestCommodityCards({
+              contractType: 'Murabaha',
+              contractDetails: contractDetails
+          });
+          setSuggestions(result);
+      } catch (error) {
+          console.error("Error getting suggestions:", error);
+          toast({
+              variant: 'destructive',
+              title: 'فشل جلب الاقتراحات'
+          });
+      } finally {
+          setIsSuggesting(false);
+      }
+  };
+
 
   const onSubmit = async (data: FormValues) => {
     if (!firestore || !user) {
@@ -181,6 +225,7 @@ export function AddTransactionDialog() {
                 sellingPrice: data.sellingPrice,
                 amount: (data.sellingPrice || 0) * (data.units || 0),
                 paymentMethod: 'أقساط شهرية',
+                commodityCardId: data.commodityCardId,
             };
             break;
         case 'mudarabah':
@@ -239,8 +284,6 @@ export function AddTransactionDialog() {
       });
     }
   };
-  
-    const { units, purchasePrice, sellingPrice } = form.watch();
 
     const totalProfit =
     units && purchasePrice && sellingPrice && units > 0 && purchasePrice > 0 && sellingPrice > 0
@@ -376,6 +419,55 @@ export function AddTransactionDialog() {
                         <span className="font-semibold">{formatCurrency(totalProfit)}</span>
                     </div>
                 )}
+                 <div className="space-y-4 rounded-md border p-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h4 className="font-medium">اقتراح بطاقة سلعية</h4>
+                            <p className="text-sm text-muted-foreground">
+                                احصل على اقتراحات لبطاقات سلع مناسبة لقيمة العقد.
+                            </p>
+                        </div>
+                        <Button type="button" size="sm" onClick={handleGetSuggestions} disabled={isSuggesting}>
+                            {isSuggesting ? <Loader2 className="h-4 w-4 animate-spin me-2" /> : <Wand2 className="h-4 w-4 me-2" />}
+                            {isSuggesting ? 'جاري...' : 'اقترح'}
+                        </Button>
+                    </div>
+                    {isSuggesting && <div className="text-center text-sm text-muted-foreground">جاري البحث عن بطاقات مناسبة...</div>}
+                    {suggestions && (
+                         <div className="space-y-2">
+                             <Alert>
+                                <AlertTitle>توصية</AlertTitle>
+                                <AlertDescription>
+                                    {suggestions.reasoning}
+                                </AlertDescription>
+                            </Alert>
+                           <FormField
+                                control={form.control}
+                                name="commodityCardId"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>البطاقات المقترحة</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                        <SelectValue placeholder="اختر بطاقة من الاقتراحات" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {suggestions.suggestedCards.map((card) => (
+                                            <SelectItem key={card} value={card}>
+                                                {card}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                        </div>
+                    )}
+                 </div>
               </>
             )}
 
