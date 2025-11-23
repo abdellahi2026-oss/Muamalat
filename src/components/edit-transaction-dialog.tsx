@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -42,11 +42,9 @@ import { format } from 'date-fns';
 import { doc, updateDoc } from 'firebase/firestore';
 import { useFirebase } from '@/firebase';
 import { Calendar } from './ui/calendar';
-import type { AnyContract, MudarabahContract } from '@/lib/types';
+import type { AnyContract, MudarabahContract, MurabahaContract } from '@/lib/types';
 
 
-// This schema is almost identical to the add dialog, but we don't need the complex refinements
-// as the contract type is fixed. We can do simpler validation.
 const formSchema = z.object({
   contractType: z.enum(['murabaha', 'mudarabah', 'musharakah', 'wakalah']),
   clientName: z.string().min(3, { message: 'يجب أن يكون اسم العميل 3 أحرف على الأقل.' }),
@@ -58,6 +56,7 @@ const formSchema = z.object({
   units: z.coerce.number().optional(),
   purchasePrice: z.coerce.number().optional(),
   sellingPrice: z.coerce.number().optional(),
+  desiredProfit: z.coerce.number().optional(),
 
   // Mudarabah specific
   capital: z.coerce.number().optional(),
@@ -88,9 +87,14 @@ interface EditTransactionDialogProps {
 export function EditTransactionDialog({ isOpen, setIsOpen, contract }: EditTransactionDialogProps) {
   const { toast } = useToast();
   const { firestore, user } = useFirebase();
+  const [lastEditedField, setLastEditedField] = useState<'profit' | 'price' | null>(null);
 
   const defaultValues = useMemo(() => {
+    const murabahaContract = contract.type === 'murabaha' ? (contract as MurabahaContract) : null;
     const mudarabahRatio = contract.type === 'mudarabah' ? (contract as MudarabahContract).profitSharingRatio.manager : 50;
+    const desiredProfit = murabahaContract 
+        ? (murabahaContract.sellingPrice - murabahaContract.purchasePrice) * murabahaContract.units
+        : undefined;
 
     return {
         ...contract,
@@ -98,6 +102,7 @@ export function EditTransactionDialog({ isOpen, setIsOpen, contract }: EditTrans
         startDate: new Date(contract.startDate),
         endDate: new Date(contract.endDate),
         profitSharingRatio: mudarabahRatio,
+        desiredProfit: desiredProfit
     };
   }, [contract]);
 
@@ -106,10 +111,16 @@ export function EditTransactionDialog({ isOpen, setIsOpen, contract }: EditTrans
     defaultValues: defaultValues
   });
   
+  const { units, purchasePrice, sellingPrice, desiredProfit } = form.watch();
+
   // When the dialog is opened with a new contract, reset the form
   useEffect(() => {
     if (isOpen) {
+        const murabahaContract = contract.type === 'murabaha' ? (contract as MurabahaContract) : null;
         const mudarabahRatio = contract.type === 'mudarabah' ? (contract as MudarabahContract).profitSharingRatio.manager : 50;
+        const profit = murabahaContract 
+            ? (murabahaContract.sellingPrice - murabahaContract.purchasePrice) * murabahaContract.units
+            : undefined;
 
         form.reset({
             ...contract,
@@ -117,10 +128,25 @@ export function EditTransactionDialog({ isOpen, setIsOpen, contract }: EditTrans
             startDate: new Date(contract.startDate),
             endDate: new Date(contract.endDate),
             profitSharingRatio: mudarabahRatio,
+            desiredProfit: profit,
         });
+        setLastEditedField(null);
     }
   }, [isOpen, contract, form]);
   
+  // Recalculate profit or selling price based on which was edited last
+  useEffect(() => {
+    if (contract.type === 'murabaha' && units && purchasePrice) {
+      if (lastEditedField === 'price' && sellingPrice) {
+        const totalProfit = (sellingPrice - purchasePrice) * units;
+        form.setValue('desiredProfit', totalProfit, { shouldValidate: true });
+      } else if (lastEditedField === 'profit' && desiredProfit !== undefined) {
+        const calculatedSellingPrice = ((purchasePrice * units) + desiredProfit) / units;
+        form.setValue('sellingPrice', calculatedSellingPrice, { shouldValidate: true });
+      }
+    }
+  }, [units, purchasePrice, sellingPrice, desiredProfit, lastEditedField, form, contract.type]);
+
   const contractType = form.watch('contractType');
 
   const getCollectionName = (type: AnyContract['type']) => {
@@ -150,6 +176,14 @@ export function EditTransactionDialog({ isOpen, setIsOpen, contract }: EditTrans
         startDate: data.startDate.toISOString(),
         endDate: data.endDate.toISOString(),
     };
+    
+    let finalSellingPrice = data.sellingPrice;
+    if (data.contractType === 'murabaha') {
+        if (lastEditedField === 'profit' && data.purchasePrice && data.units && data.desiredProfit !== undefined) {
+            finalSellingPrice = ((data.purchasePrice * data.units) + data.desiredProfit) / data.units;
+        }
+    }
+
 
     switch (data.contractType) {
         case 'murabaha':
@@ -158,8 +192,8 @@ export function EditTransactionDialog({ isOpen, setIsOpen, contract }: EditTrans
                 goods: data.goods,
                 units: data.units,
                 purchasePrice: data.purchasePrice,
-                sellingPrice: data.sellingPrice,
-                amount: (data.sellingPrice || 0) * (data.units || 0),
+                sellingPrice: finalSellingPrice,
+                amount: (finalSellingPrice || 0) * (data.units || 0),
             };
             break;
         case 'mudarabah':
@@ -204,13 +238,6 @@ export function EditTransactionDialog({ isOpen, setIsOpen, contract }: EditTrans
       });
     }
   };
-  
-  const { units, purchasePrice, sellingPrice } = form.watch();
-
-  const totalProfit =
-  units && purchasePrice && sellingPrice && units > 0 && purchasePrice > 0 && sellingPrice > 0
-      ? (sellingPrice - purchasePrice) * units
-      : null;
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('fr-FR', {
@@ -275,6 +302,7 @@ export function EditTransactionDialog({ isOpen, setIsOpen, contract }: EditTrans
                         </FormItem>
                     )}
                     />
+                <div className="grid grid-cols-2 gap-4">
                     <FormField
                     control={form.control}
                     name="units"
@@ -288,7 +316,6 @@ export function EditTransactionDialog({ isOpen, setIsOpen, contract }: EditTrans
                         </FormItem>
                     )}
                     />
-                <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="purchasePrice"
@@ -302,6 +329,8 @@ export function EditTransactionDialog({ isOpen, setIsOpen, contract }: EditTrans
                       </FormItem>
                     )}
                   />
+                </div>
+                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="sellingPrice"
@@ -309,19 +338,26 @@ export function EditTransactionDialog({ isOpen, setIsOpen, contract }: EditTrans
                       <FormItem>
                         <FormLabel>سعر البيع للقطعة</FormLabel>
                         <FormControl>
-                          <Input type="number" {...field} value={field.value || ''} />
+                          <Input type="number" {...field} value={field.value || ''} onFocus={() => setLastEditedField('price')} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                   <FormField
+                    control={form.control}
+                    name="desiredProfit"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>الربح الإجمالي</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} value={field.value || ''} onFocus={() => setLastEditedField('profit')} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 </div>
-                 {totalProfit !== null && (
-                    <div className="rounded-md border bg-muted p-3 text-sm">
-                        <span className="text-muted-foreground">الربح الإجمالي: </span>
-                        <span className="font-semibold">{formatCurrency(totalProfit)}</span>
-                    </div>
-                )}
               </>
             )}
 

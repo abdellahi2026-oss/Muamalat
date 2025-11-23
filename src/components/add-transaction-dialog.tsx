@@ -58,8 +58,8 @@ const formSchema = z.object({
   goods: z.string().optional(),
   units: z.coerce.number().optional(),
   purchasePrice: z.coerce.number().optional(),
-  desiredProfit: z.coerce.number().optional(), // New field for desired profit
-  sellingPrice: z.coerce.number().optional(), // This will be calculated
+  desiredProfit: z.coerce.number().optional(),
+  sellingPrice: z.coerce.number().optional(),
   commodityCardId: z.string().optional(),
 
   // Mudarabah specific
@@ -83,13 +83,13 @@ const formSchema = z.object({
             !!data.goods && data.goods.length >= 2 &&
             data.units !== undefined && data.units > 0 &&
             data.purchasePrice !== undefined && data.purchasePrice > 0 &&
-            data.desiredProfit !== undefined && data.desiredProfit > 0
+            (data.desiredProfit !== undefined || data.sellingPrice !== undefined)
         );
     }
     return true;
 }, {
-    message: 'بيانات المرابحة غير كاملة أو غير صحيحة. يجب إدخال الربح المطلوب.',
-    path: ['desiredProfit'], 
+    message: 'بيانات المرابحة غير كاملة. يجب إدخال سعر البيع أو الربح المطلوب.',
+    path: ['sellingPrice'], 
 })
 .refine(data => { // Conditional validation for Mudarabah
     if (data.contractType === 'mudarabah') {
@@ -132,6 +132,7 @@ export function AddTransactionDialog() {
   const { user } = useFirebase();
   const [suggestions, setSuggestions] = useState<SuggestCommodityCardsOutput | null>(null);
   const [isSuggesting, setIsSuggesting] = useState(false);
+  const [lastEditedField, setLastEditedField] = useState<'profit' | 'price' | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -156,30 +157,35 @@ export function AddTransactionDialog() {
   });
   
   const contractType = form.watch('contractType');
-  const { units, purchasePrice, goods, desiredProfit } = form.watch();
+  const { units, purchasePrice, goods, desiredProfit, sellingPrice } = form.watch();
 
-  const calculatedSellingPrice = useMemo(() => {
-    if (units && purchasePrice && desiredProfit) {
-        const totalPurchasePrice = purchasePrice * units;
-        const totalSellingPrice = totalPurchasePrice + desiredProfit;
-        return totalSellingPrice / units;
+  // Recalculate profit or selling price based on which was edited last
+  useEffect(() => {
+    if (units && purchasePrice) {
+      if (lastEditedField === 'price' && sellingPrice) {
+        const totalProfit = (sellingPrice - purchasePrice) * units;
+        form.setValue('desiredProfit', totalProfit, { shouldValidate: true });
+      } else if (lastEditedField === 'profit' && desiredProfit !== undefined) {
+        const calculatedSellingPrice = ((purchasePrice * units) + desiredProfit) / units;
+        form.setValue('sellingPrice', calculatedSellingPrice, { shouldValidate: true });
+      }
     }
-    return null;
-  }, [units, purchasePrice, desiredProfit]);
+  }, [units, purchasePrice, sellingPrice, desiredProfit, lastEditedField, form]);
 
   // Automatically fetch suggestions when inputs are valid
   useEffect(() => {
-    if (contractType === 'murabaha' && units && purchasePrice && desiredProfit && goods) {
+    const finalSellingPrice = sellingPrice || 0;
+    if (contractType === 'murabaha' && units && purchasePrice && finalSellingPrice && goods) {
         const handleGetSuggestions = async () => {
-            const totalSellingPrice = (calculatedSellingPrice || 0) * units;
+             const totalValue = finalSellingPrice * units;
              const contractDetails = `
                 Goods: ${goods},
                 Units: ${units},
                 Purchase Price: ${purchasePrice},
-                Total Value: ${totalSellingPrice}
+                Total Value: ${totalValue}
             `;
 
-            if (!totalSellingPrice) return;
+            if (!totalValue) return;
 
             setIsSuggesting(true);
             setSuggestions(null);
@@ -202,7 +208,7 @@ export function AddTransactionDialog() {
 
         handleGetSuggestions();
     }
-  }, [units, purchasePrice, desiredProfit, goods, contractType, calculatedSellingPrice, toast]);
+  }, [units, purchasePrice, sellingPrice, goods, contractType, toast]);
 
 
   const onSubmit = async (data: FormValues) => {
@@ -215,10 +221,11 @@ export function AddTransactionDialog() {
       return;
     }
     
-    // Recalculate selling price just to be safe
-    const finalSellingPrice = (data.purchasePrice && data.units && data.desiredProfit)
-      ? ((data.purchasePrice * data.units) + data.desiredProfit) / data.units
-      : data.sellingPrice;
+    // Final validation before submitting
+    let finalSellingPrice = data.sellingPrice;
+    if (lastEditedField === 'profit' && data.purchasePrice && data.units && data.desiredProfit !== undefined) {
+      finalSellingPrice = ((data.purchasePrice * data.units) + data.desiredProfit) / data.units;
+    }
 
 
     let collectionName: string;
@@ -423,29 +430,40 @@ export function AddTransactionDialog() {
                     )}
                   />
                 </div>
-                 <FormField
-                    control={form.control}
-                    name="desiredProfit"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>الربح الإجمالي المطلوب</FormLabel>
-                        <FormControl>
-                          <Input type="number" placeholder="أدخل مبلغ الربح" {...field} value={field.value || ''} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                 <div className="grid grid-cols-2 gap-4">
+                     <FormField
+                        control={form.control}
+                        name="sellingPrice"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>سعر البيع للقطعة</FormLabel>
+                            <FormControl>
+                              <Input type="number" {...field} value={field.value || ''} onFocus={() => setLastEditedField('price')} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                     <FormField
+                        control={form.control}
+                        name="desiredProfit"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>الربح الإجمالي</FormLabel>
+                            <FormControl>
+                              <Input type="number" placeholder="أو أدخل الربح" {...field} value={field.value || ''} onFocus={() => setLastEditedField('profit')} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                </div>
 
-                 {calculatedSellingPrice !== null && (
+                 {(sellingPrice && units) && (
                     <div className="grid grid-cols-2 gap-4 rounded-md border bg-muted p-3 text-sm">
                         <div>
                             <span className="text-muted-foreground">إجمالي البيع: </span>
-                            <span className="font-semibold">{formatCurrency(calculatedSellingPrice * (units || 0))}</span>
-                        </div>
-                         <div>
-                            <span className="text-muted-foreground">سعر البيع للقطعة: </span>
-                            <span className="font-semibold">{formatCurrency(calculatedSellingPrice)}</span>
+                            <span className="font-semibold">{formatCurrency(sellingPrice * units)}</span>
                         </div>
                     </div>
                 )}
@@ -698,3 +716,5 @@ export function AddTransactionDialog() {
     </Dialog>
   );
 }
+
+    
