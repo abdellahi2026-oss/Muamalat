@@ -469,7 +469,7 @@ export function AddTransactionDialog() {
                 )}
                  <div className="space-y-4 rounded-md border p-4">
                     <div className="flex items-center justify-between">
-                        <h4 className="font-medium">اقتراح بطاقة سلعية</h4>
+                        <h4 className="font-medium">اقتراح ربح</h4>
                          {isSuggesting && <Loader2 className="h-5 w-5 animate-spin" />}
                     </div>
 
@@ -717,4 +717,5 @@ export function AddTransactionDialog() {
   );
 }
 
+    
     
