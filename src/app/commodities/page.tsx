@@ -46,6 +46,16 @@ const formatCurrency = (amount: number) => {
   }).format(amount);
 };
 
+const getContractProfit = (contract: AnyContract) => {
+    if (contract.type === 'murabaha') {
+        const murabaha = contract as MurabahaContract;
+        const profit = (murabaha.sellingPrice - murabaha.purchasePrice) * murabaha.units;
+        return formatCurrency(profit);
+    }
+    return <span className="text-muted-foreground">غير محدد</span>;
+};
+
+
 const getStatusBadge = (status: AnyContract['status']) => {
   switch (status) {
     case 'active':
@@ -170,16 +180,17 @@ export default function CurrentTransactionsPage() {
                 <TableHead>العميل / المشروع</TableHead>
                 <TableHead>نوع العقد</TableHead>
                 <TableHead>المبلغ</TableHead>
+                <TableHead>الربح</TableHead>
                 <TableHead>الحالة</TableHead>
                  <TableHead>تاريخ الانتهاء</TableHead>
                  <TableHead className="text-right">إجراءات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading && <TableRow><TableCell colSpan={6} className="text-center">جارِ التحميل...</TableCell></TableRow>}
+              {isLoading && <TableRow><TableCell colSpan={7} className="text-center">جارِ التحميل...</TableCell></TableRow>}
               {!isLoading && filteredContracts.length === 0 && (
                 <TableRow>
-                    <TableCell colSpan={6} className="text-center">
+                    <TableCell colSpan={7} className="text-center">
                         {searchQuery ? 'لم يتم العثور على نتائج.' : 'لا توجد معاملات لعرضها.'}
                     </TableCell>
                 </TableRow>
@@ -189,6 +200,7 @@ export default function CurrentTransactionsPage() {
                   <TableCell>{renderClientOrProject(contract)}</TableCell>
                   <TableCell>{getContractTypeArabic(contract.type)}</TableCell>
                   <TableCell>{contract.amount ? formatCurrency(contract.amount) : 'N/A'}</TableCell>
+                  <TableCell>{getContractProfit(contract)}</TableCell>
                   <TableCell>{getStatusBadge(contract.status)}</TableCell>
                   <TableCell>
                     {contract.endDate ? format(new Date(contract.endDate), 'dd/MM/yyyy') : 'N/A'}
