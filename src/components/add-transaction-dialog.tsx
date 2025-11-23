@@ -451,12 +451,7 @@ export function AddTransactionDialog() {
                 )}
                  <div className="space-y-4 rounded-md border p-4">
                     <div className="flex items-center justify-between">
-                        <div>
-                            <h4 className="font-medium">اقتراح بطاقة سلعية</h4>
-                            <p className="text-sm text-muted-foreground">
-                                يتم البحث عن بطاقات تلقائيًا عند إدخال تفاصيل العقد.
-                            </p>
-                        </div>
+                        <h4 className="font-medium">اقتراح بطاقة سلعية</h4>
                          {isSuggesting && <Loader2 className="h-5 w-5 animate-spin" />}
                     </div>
 
