@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Card,
   CardContent,
@@ -36,10 +36,20 @@ import type { AnyContract, MurabahaContract, MudarabahContract, MusharakahContra
 import { format } from 'date-fns';
 import { useCollection, useFirestore, useMemoFirebase, useFirebase } from '@/firebase';
 import { collection, query, where, collectionGroup } from 'firebase/firestore';
+import { DateRangePicker } from '@/components/date-range-picker';
+import type { DateRange } from 'react-day-picker';
+import { subDays } from 'date-fns';
+
 
 export default function DashboardPage() {
     const firestore = useFirestore();
     const { user } = useFirebase();
+
+    const [dateRange, setDateRange] = useState<DateRange | undefined>({
+      from: subDays(new Date(), 29),
+      to: new Date(),
+    });
+
 
     const murabahaQuery = useMemoFirebase(() => {
         if (!firestore || !user?.uid) return null;
@@ -72,8 +82,18 @@ export default function DashboardPage() {
         if (mudarabahContracts) contracts.push(...mudarabahContracts);
         if (musharakahContracts) contracts.push(...musharakahContracts);
         if (wakalahContracts) contracts.push(...wakalahContracts);
-        return contracts;
-    }, [murabahaContracts, mudarabahContracts, musharakahContracts, wakalahContracts]);
+        
+        if (!dateRange?.from) return contracts;
+        
+        const fromDate = dateRange.from;
+        const toDate = dateRange.to || new Date(); // Default to today if 'to' is not set
+
+        return contracts.filter(contract => {
+            const contractStartDate = new Date(contract.startDate);
+            return contractStartDate >= fromDate && contractStartDate <= toDate;
+        });
+
+    }, [murabahaContracts, mudarabahContracts, musharakahContracts, wakalahContracts, dateRange]);
 
     const isLoading = loadingMurabaha || loadingMudarabah || loadingMusharakah || loadingWakalah;
 
@@ -84,16 +104,18 @@ export default function DashboardPage() {
 
   const totalContractValue = allContracts.reduce((sum, c) => sum + (c.amount || 0), 0);
 
-  const expectedProfit = useMemo(() => {
-    if (!murabahaContracts) return 0;
-    return murabahaContracts
-      .filter(c => c.status === 'active')
+ const expectedProfit = useMemo(() => {
+    // We only calculate profit from murabaha contracts created within the date range.
+    // The `allContracts` memo already filters by date range, so we use that.
+    return allContracts
+      .filter(c => c.type === 'murabaha' && c.status === 'active')
       .reduce((sum, c) => {
-        const profitPerUnit = (c.sellingPrice || 0) - (c.purchasePrice || 0);
-        const totalProfit = profitPerUnit * (c.units || 0);
+        const contract = c as MurabahaContract;
+        const profitPerUnit = (contract.sellingPrice || 0) - (contract.purchasePrice || 0);
+        const totalProfit = profitPerUnit * (contract.units || 0);
         return sum + totalProfit;
       }, 0);
-  }, [murabahaContracts]);
+  }, [allContracts]);
 
 
   const overdueContracts = allContracts.filter(
@@ -159,11 +181,14 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="font-headline text-3xl font-bold tracking-tight">لوحة التحكم</h1>
-        <p className="text-muted-foreground">
-          نظرة عامة على معاملاتك وعقودك المالية.
-        </p>
+       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+        <div className="space-y-1">
+          <h1 className="font-headline text-3xl font-bold tracking-tight">لوحة التحكم</h1>
+          <p className="text-muted-foreground">
+            نظرة عامة على معاملاتك وعقودك المالية.
+          </p>
+        </div>
+        <DateRangePicker date={dateRange} setDate={setDateRange} />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -175,7 +200,7 @@ export default function DashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">{isLoading ? '...' : formatCurrency(totalContractValue)}</div>
             <p className="text-xs text-muted-foreground">
-              +2.1% من الشهر الماضي
+              في الفترة المحددة
             </p>
           </CardContent>
         </Card>
@@ -187,7 +212,7 @@ export default function DashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">{isLoading ? '...' : `+${activeContracts}`}</div>
             <p className="text-xs text-muted-foreground">
-              +15.3% من الشهر الماضي
+              من العقود التي بدأت في الفترة المحددة
             </p>
           </CardContent>
         </Card>
@@ -199,7 +224,7 @@ export default function DashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">{isLoading ? '...' : overdueContracts}</div>
             <p className="text-xs text-muted-foreground">
-               {overdueContracts > 0 ? <ArrowUpRight className="h-4 w-4 text-destructive inline"/> : <ArrowDownRight className="h-4 w-4 text-green-500 inline"/>} {overdueContracts > 0 ? '+2' : ''} عن الشهر الماضي
+               في الفترة المحددة
             </p>
           </CardContent>
         </Card>
@@ -211,7 +236,7 @@ export default function DashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">{isLoading ? '...' : formatCurrency(expectedProfit)}</div>
             <p className="text-xs text-muted-foreground">
-              من عقود المرابحة النشطة
+              من عقود المرابحة النشطة في الفترة
             </p>
           </CardContent>
         </Card>
@@ -222,7 +247,7 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle>نظرة عامة على العقود</CardTitle>
             <CardDescription>
-              توزيع العقود حسب النوع خلال هذا العام.
+              توزيع العقود التي بدأت في الفترة المحددة.
             </CardDescription>
           </CardHeader>
           <CardContent>
