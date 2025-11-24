@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -10,21 +11,21 @@
     --card-foreground: 224 71% 4%;
     --popover: 0 0% 100%;
     --popover-foreground: 224 71% 4%;
-    --primary: 233 95% 27%;
+    --primary: 233 95% 27%; /* Soft Blue: #031185 */
     --primary-foreground: 0 0% 98%;
     --secondary: 220 13% 91%;
     --secondary-foreground: 224 71% 4%;
     --muted: 220 13% 96%;
     --muted-foreground: 220 9% 46%;
-    --accent: 212 92% 83%;
+    --accent: 0 0% 80%; /* Light Grey: #D3D3D3 */
     --accent-foreground: 224 71% 4%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 233 95% 27%;
+    --border: 220 13% 91%;
     --input: 220 13% 91%;
     --ring: 233 95% 27%;
     --chart-1: 233 95% 27%;
-    --chart-2: 233 75% 57%;
+    --chart-2: 25 95% 53%; /* Green for paid */
     --chart-3: 233 55% 77%;
     --chart-4: 210 40% 96.1%;
     --chart-5: 220 13% 91%;
@@ -48,11 +49,11 @@
     --accent-foreground: 0 0% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 233 85% 60%;
+    --border: 216 34% 17%;
     --input: 216 34% 17%;
     --ring: 233 85% 60%;
     --chart-1: 233 85% 60%;
-    --chart-2: 233 70% 50%;
+    --chart-2: 25 85% 60%;
     --chart-3: 233 55% 40%;
     --chart-4: 216 34% 17%;
     --chart-5: 216 20% 12%;

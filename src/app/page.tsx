@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -23,342 +23,192 @@ import {
   ChartTooltipContent,
   ChartConfig,
 } from '@/components/ui/chart';
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
+import { Pie, PieChart, Cell, Tooltip } from 'recharts';
 import { Badge } from '@/components/ui/badge';
 import {
-  Activity,
-  ArrowDownRight,
-  ArrowUpRight,
-  CircleDollarSign,
-  Users,
+  AlertCircle,
+  Clock,
+  TrendingUp,
+  CreditCard,
 } from 'lucide-react';
-import type { AnyContract, MurabahaContract, MudarabahContract, MusharakahContract, WakalahContract } from '@/lib/types';
-import { format } from 'date-fns';
+import type { Transaction } from '@/lib/types';
+import { format, addDays } from 'date-fns';
+import { ar } from 'date-fns/locale';
 import { useCollection, useFirestore, useMemoFirebase, useFirebase } from '@/firebase';
-import { collection, query, where, collectionGroup } from 'firebase/firestore';
-import { DateRangePicker } from '@/components/date-range-picker';
-import type { DateRange } from 'react-day-picker';
-import { subDays, addDays } from 'date-fns';
+import { collection } from 'firebase/firestore';
 import Link from 'next/link';
+import { Loader2 } from 'lucide-react';
 
+
+const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('ar-MR', {
+      style: 'currency',
+      currency: 'MRU',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+};
 
 export default function DashboardPage() {
     const firestore = useFirestore();
     const { user } = useFirebase();
 
-    const [dateRange, setDateRange] = useState<DateRange | undefined>({
-      from: subDays(new Date(), 29),
-      to: new Date(),
-    });
-
-
-    const murabahaQuery = useMemoFirebase(() => {
+    const transactionsQuery = useMemoFirebase(() => {
         if (!firestore || !user?.uid) return null;
-        return collection(firestore, 'clients', user.uid, 'murabahaContracts');
-    }, [firestore, user?.uid]);
-
-    const mudarabahQuery = useMemoFirebase(() => {
-        if (!firestore || !user?.uid) return null;
-        return collection(firestore, 'clients', user.uid, 'mudarabahContracts');
+        return collection(firestore, 'users', user.uid, 'transactions');
     }, [firestore, user?.uid]);
     
-    const musharakahQuery = useMemoFirebase(() => {
-        if (!firestore || !user?.uid) return null;
-        return collection(firestore, 'clients', user.uid, 'musharakahContracts');
-    }, [firestore, user?.uid]);
+    const { data: transactions, isLoading } = useCollection<Transaction>(transactionsQuery);
 
-    const wakalahQuery = useMemoFirebase(() => {
-        if (!firestore || !user?.uid) return null;
-        return collection(firestore, 'clients', user.uid, 'wakalahContracts');
-    }, [firestore, user?.uid]);
-
-    const { data: murabahaContracts, isLoading: loadingMurabaha } = useCollection<MurabahaContract>(murabahaQuery);
-    const { data: mudarabahContracts, isLoading: loadingMudarabah } = useCollection<MudarabahContract>(mudarabahQuery);
-    const { data: musharakahContracts, isLoading: loadingMusharakah } = useCollection<MusharakahContract>(musharakahQuery);
-    const { data: wakalahContracts, isLoading: loadingWakalah } = useCollection<WakalahContract>(wakalahQuery);
-
-    const allContracts = useMemo(() => {
-        const contracts: AnyContract[] = [];
-        if (murabahaContracts) contracts.push(...murabahaContracts);
-        if (mudarabahContracts) contracts.push(...mudarabahContracts);
-        if (musharakahContracts) contracts.push(...musharakahContracts);
-        if (wakalahContracts) contracts.push(...wakalahContracts);
+    const stats = useMemo(() => {
+        const active = transactions?.filter(t => t.status === 'active' || t.status === 'overdue') || [];
+        const completed = transactions?.filter(t => t.status === 'completed') || [];
         
-        if (!dateRange?.from) return contracts;
-        
-        const fromDate = dateRange.from;
-        const toDate = dateRange.to || new Date(); // Default to today if 'to' is not set
+        const expectedProfit = active.reduce((sum, t) => sum + t.profit, 0);
+        const totalDue = active.reduce((sum, t) => sum + t.remainingAmount, 0);
+        const overdueCount = active.filter(t => t.status === 'overdue').length;
 
-        return contracts.filter(contract => {
-            const contractStartDate = new Date(contract.startDate);
-            return contractStartDate >= fromDate && contractStartDate <= toDate;
-        });
+        return { expectedProfit, totalDue, overdueCount, activeCount: active.length, completedCount: completed.length };
+    }, [transactions]);
 
-    }, [murabahaContracts, mudarabahContracts, musharakahContracts, wakalahContracts, dateRange]);
-    
-    // We need all contracts for the "attention" section, not just the ones in the date range.
-    const allContractsUnfiltered = useMemo(() => {
-        const contracts: AnyContract[] = [];
-        if (murabahaContracts) contracts.push(...murabahaContracts);
-        if (mudarabahContracts) contracts.push(...mudarabahContracts);
-        if (musharakahContracts) contracts.push(...musharakahContracts);
-        if (wakalahContracts) contracts.push(...wakalahContracts);
-        return contracts;
-    }, [murabahaContracts, mudarabahContracts, musharakahContracts, wakalahContracts]);
+    const attentionTransactions = useMemo(() => {
+        const today = new Date();
+        const oneWeekFromNow = addDays(today, 7);
 
-
-    const isLoading = loadingMurabaha || loadingMudarabah || loadingMusharakah || loadingWakalah;
+        return (transactions || [])
+            .filter(t => {
+                if (t.status === 'completed' || t.status === 'archived') return false;
+                const dueDate = new Date(t.dueDate);
+                const isOverdue = t.status === 'overdue';
+                const isEndingSoon = dueDate >= today && dueDate <= oneWeekFromNow;
+                return isOverdue || isEndingSoon;
+            })
+            .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+            .slice(0, 5);
+    }, [transactions]);
 
 
-  const activeContracts = allContracts.filter(
-    (c) => c.status === 'active'
-  ).length;
+    const chartData = [
+        { name: 'الديون المستحقة', value: stats.activeCount, fill: 'hsl(var(--destructive))' },
+        { name: 'الديون المسددة', value: stats.completedCount, fill: 'hsl(var(--chart-2))' },
+    ];
 
-  const totalContractValue = allContracts.reduce((sum, c) => sum + (c.amount || 0), 0);
+    const chartConfig = {
+        value: { label: 'المعاملات' },
+        'الديون المستحقة': { label: 'الديون المستحقة', color: 'hsl(var(--destructive))' },
+        'الديون المسددة': { label: 'الديون المسددة', color: 'hsl(var(--chart-2))' },
+    } satisfies ChartConfig;
 
- const expectedProfit = useMemo(() => {
-    // We only calculate profit from murabaha contracts created within the date range.
-    // The `allContracts` memo already filters by date range, so we use that.
-    return allContracts
-      .filter(c => c.type === 'murabaha' && c.status === 'active')
-      .reduce((sum, c) => {
-        const contract = c as MurabahaContract;
-        const profitPerUnit = (contract.sellingPrice || 0) - (contract.purchasePrice || 0);
-        const totalProfit = profitPerUnit * (contract.units || 0);
-        return sum + totalProfit;
-      }, 0);
-  }, [allContracts]);
-  
-  const realizedProfit = useMemo(() => {
-    // Calculate profit from *completed* murabaha contracts.
-    return allContracts
-      .filter(c => c.type === 'murabaha' && c.status === 'completed')
-      .reduce((sum, c) => {
-        const contract = c as MurabahaContract;
-        const profitPerUnit = (contract.sellingPrice || 0) - (contract.purchasePrice || 0);
-        const totalProfit = profitPerUnit * (contract.units || 0);
-        return sum + totalProfit;
-      }, 0);
-  }, [allContracts]);
-
-
-  const attentionContracts = useMemo(() => {
-    const today = new Date();
-    const oneWeekFromNow = addDays(today, 7);
-
-    return allContractsUnfiltered
-        .filter(c => {
-            if (c.status === 'completed') return false;
-            const endDate = new Date(c.endDate);
-            const isOverdue = c.status === 'overdue';
-            const isEndingSoon = endDate >= today && endDate <= oneWeekFromNow;
-            return isOverdue || isEndingSoon;
-        })
-        .sort((a, b) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime())
-        .slice(0, 5);
-  }, [allContractsUnfiltered]);
-
-  const contractTypes = allContracts.reduce((acc, contract) => {
-    acc[contract.type] = (acc[contract.type] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  const chartData = [
-    { type: 'المرابحة', count: contractTypes['murabaha'] || 0, fill: 'var(--color-murabaha)' },
-    { type: 'المضاربة', count: contractTypes['mudarabah'] || 0, fill: 'var(--color-mudarabah)' },
-    { type: 'المشاركة', count: contractTypes['musharakah'] || 0, fill: 'var(--color-musharakah)' },
-    { type: 'الوكالة', count: contractTypes['wakalah'] || 0, fill: 'var(--color-wakalah)' },
-  ];
-  
-  const chartConfig = {
-    count: {
-      label: "العدد",
-    },
-    murabaha: {
-      label: "المرابحة",
-      color: "hsl(var(--chart-1))",
-    },
-    mudarabah: {
-      label: "المضاربة",
-      color: "hsl(var(--chart-2))",
-    },
-    musharakah: {
-      label: "المشاركة",
-      color: "hsl(var(--chart-3))",
-    },
-    wakalah: {
-      label: "الوكالة",
-      color: "hsl(var(--chart-4))",
-    },
-  } satisfies ChartConfig;
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'MRU',
-    }).format(amount);
-  };
-
-  const getStatusBadge = (status: AnyContract['status']) => {
-    switch (status) {
-      case 'active':
-        return <Badge variant="secondary">نشط</Badge>;
-      case 'completed':
-        return <Badge variant="default" className='bg-green-600 hover:bg-green-700'>مكتمل</Badge>;
-      case 'overdue':
-        return <Badge variant="destructive">متأخر</Badge>;
-      case 'archived':
-        return <Badge variant="outline">مؤرشف</Badge>;
-    }
-  };
 
   return (
     <div className="space-y-6">
-       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-        <div className="space-y-1">
+       <div className="space-y-1">
           <h1 className="font-headline text-3xl font-bold tracking-tight">لوحة التحكم</h1>
           <p className="text-muted-foreground">
-            نظرة عامة على معاملاتك وعقودك المالية.
+            متابعة دقيقة ومريحة لأرباحك وديونك الحالية.
           </p>
         </div>
-        <DateRangePicker date={dateRange} setDate={setDateRange} />
-      </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Link href="/commodities">
-            <Card className='hover:bg-muted/50 transition-colors'>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">إجمالي قيمة العقود</CardTitle>
-                <CircleDollarSign className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">إجمالي الأرباح المتوقعة</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-                <div className="text-2xl font-bold">{isLoading ? '...' : formatCurrency(totalContractValue)}</div>
+                <div className="text-2xl font-bold">{isLoading ? <Loader2 className="size-6 animate-spin"/> : formatCurrency(stats.expectedProfit)}</div>
                 <p className="text-xs text-muted-foreground">
-                في الفترة المحددة
+                من كل المعاملات الآجلة المفتوحة حاليًا.
                 </p>
             </CardContent>
-            </Card>
-        </Link>
-        <Link href="/commodities?status=active">
-            <Card className='hover:bg-muted/50 transition-colors'>
+        </Card>
+        <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">العقود النشطة</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">الرصيد الكلي المستحق</CardTitle>
+                <CreditCard className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-                <div className="text-2xl font-bold">{isLoading ? '...' : `+${activeContracts}`}</div>
+                <div className="text-2xl font-bold">{isLoading ? <Loader2 className="size-6 animate-spin"/> : formatCurrency(stats.totalDue)}</div>
                 <p className="text-xs text-muted-foreground">
-                من العقود التي بدأت في الفترة المحددة
+                إجمالي المبلغ الذي يدين به الزبائن.
                 </p>
             </CardContent>
-            </Card>
-        </Link>
-         <Link href="/commodities">
-            <Card className='hover:bg-muted/50 transition-colors'>
+        </Card>
+        <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">الربح المتوقع</CardTitle>
-                <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">المعاملات المتأخرة</CardTitle>
+                <AlertCircle className="h-4 w-4 text-red-500" />
             </CardHeader>
             <CardContent>
-                <div className="text-2xl font-bold">{isLoading ? '...' : formatCurrency(expectedProfit)}</div>
+                <div className="text-2xl font-bold">{isLoading ? <Loader2 className="size-6 animate-spin"/> : `+${stats.overdueCount}`}</div>
                 <p className="text-xs text-muted-foreground">
-                من عقود المرابحة النشطة في الفترة
+                المعاملات التي تجاوزت تاريخ الاستحقاق.
                 </p>
             </CardContent>
-            </Card>
-         </Link>
-        <Link href="/commodities?status=completed">
-            <Card className='hover:bg-muted/50 transition-colors'>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">الأرباح المحققة</CardTitle>
-                <ArrowDownRight className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-                <div className="text-2xl font-bold">{isLoading ? '...' : formatCurrency(realizedProfit)}</div>
-                <p className="text-xs text-muted-foreground">
-                من عقود المرابحة المكتملة في الفترة
-                </p>
-            </CardContent>
-            </Card>
-        </Link>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
         <Card className="lg:col-span-3">
           <CardHeader>
-            <CardTitle>نظرة عامة على العقود</CardTitle>
+            <CardTitle>تنبيهات الاستحقاق القادمة</CardTitle>
             <CardDescription>
-              توزيع العقود التي بدأت في الفترة المحددة.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-             {isLoading ? (
-                <div className="flex h-64 w-full items-center justify-center">
-                  <p>جارِ تحميل الرسم البياني...</p>
-                </div>
-              ) : (
-            <ChartContainer config={chartConfig} className="h-64 w-full">
-              <BarChart data={chartData} accessibilityLayer>
-                <CartesianGrid vertical={false} />
-                <XAxis
-                  dataKey="type"
-                  tickLine={false}
-                  tickMargin={10}
-                  axisLine={false}
-                />
-                 <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={10}
-                  allowDecimals={false}
-                  orientation="right"
-                />
-                <ChartTooltip
-                  cursor={false}
-                  content={<ChartTooltipContent indicator="dot" />}
-                />
-                <Bar dataKey="count" radius={4} />
-              </BarChart>
-            </ChartContainer>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>عقود تتطلب الانتباه</CardTitle>
-            <CardDescription>
-              العقود المتأخرة أو التي تنتهي خلال أسبوع.
+              أهم المعاملات التي تستحق السداد خلال الـ 7 أيام القادمة.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>العميل</TableHead>
-                  <TableHead>الحالة</TableHead>
-                  <TableHead className="text-left">تاريخ الانتهاء</TableHead>
+                  <TableHead>الزبون</TableHead>
+                  <TableHead>المبلغ المتبقي</TableHead>
+                  <TableHead className="text-left">تاريخ الاستحقاق</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading && <TableRow><TableCell colSpan={3} className="text-center">جارِ التحميل...</TableCell></TableRow>}
-                {!isLoading && attentionContracts.length === 0 && <TableRow><TableCell colSpan={3} className="text-center">لا توجد عقود.</TableCell></TableRow>}
-                {!isLoading && attentionContracts.map((contract) => (
-                  <TableRow key={contract.id}>
+                {isLoading && <TableRow><TableCell colSpan={3} className="text-center h-24"><Loader2 className='mx-auto animate-spin'/></TableCell></TableRow>}
+                {!isLoading && attentionTransactions.length === 0 && <TableRow><TableCell colSpan={3} className="text-center h-24">لا توجد معاملات تستحق قريبًا.</TableCell></TableRow>}
+                {!isLoading && attentionTransactions.map((t) => (
+                  <TableRow key={t.id}>
                     <TableCell>
-                      <div className="font-medium">{contract.clientName}</div>
-                      <div className="hidden text-sm text-muted-foreground md:inline">
-                        {contract.type}
-                      </div>
+                      <Link href={`/clients/${t.clientId}`} className="font-medium hover:underline">{t.clientName}</Link>
                     </TableCell>
-                    <TableCell>{getStatusBadge(contract.status)}</TableCell>
-                    <TableCell className="text-left">
-                      {format(new Date(contract.endDate), 'dd/MM/yyyy')}
+                    <TableCell>{formatCurrency(t.remainingAmount)}</TableCell>
+                    <TableCell className="text-left flex items-center justify-end gap-2">
+                      <Clock className="size-4 text-muted-foreground"/>
+                      <span>{format(new Date(t.dueDate), 'd MMMM', { locale: ar })}</span>
+                      {t.status === 'overdue' && <Badge variant="destructive">متأخر</Badge>}
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>نظرة عامة على الديون</CardTitle>
+            <CardDescription>
+              نسبة المعاملات المسددة مقابل المستحقة.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+             {isLoading ? (
+                <div className="flex h-64 w-full items-center justify-center">
+                  <Loader2 className="animate-spin" />
+                </div>
+              ) : (
+            <ChartContainer config={chartConfig} className="mx-auto aspect-square h-full max-h-[250px]">
+                <PieChart>
+                    <Tooltip
+                        cursor={false}
+                        content={<ChartTooltipContent hideLabel indicator='dot' nameKey="name" />}
+                    />
+                    <Pie data={chartData} dataKey="value" nameKey="name" innerRadius={60} strokeWidth={5} />
+                </PieChart>
+            </ChartContainer>
+            )}
           </CardContent>
         </Card>
       </div>

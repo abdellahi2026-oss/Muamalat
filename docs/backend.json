@@ -7,353 +7,69 @@
       "type": "object",
       "description": "Represents a user profile in the system.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the user, matching Firebase Auth UID."
-        },
-        "name": {
-          "type": "string",
-          "description": "Name of the user."
-        },
-        "email": {
-          "type": "string",
-          "format": "email",
-          "description": "Email address of the user."
-        },
-        "role": {
-          "type": "string",
-          "description": "The role of the user.",
-          "enum": ["merchant"]
-        },
-        "status": {
-          "type": "string",
-          "description": "The status of the user account.",
-          "enum": ["active", "inactive"]
-        },
-        "lastSignInTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The last time the user signed in."
-        }
+        "id": { "type": "string", "description": "Unique identifier for the user, matching Firebase Auth UID." },
+        "name": { "type": "string", "description": "Name of the user." },
+        "email": { "type": "string", "format": "email", "description": "Email address of the user." },
+        "role": { "type": "string", "description": "The role of the user.", "enum": ["merchant", "admin"] },
+        "status": { "type": "string", "description": "The status of the user account.", "enum": ["active", "inactive"] },
+        "lastSignInTime": { "type": "string", "format": "date-time", "description": "The last time the user signed in." }
       },
-      "required": [
-        "id",
-        "name",
-        "email",
-        "role",
-        "status"
-      ]
+      "required": ["id", "name", "email", "role", "status"]
     },
-    "MurabahaContract": {
+    "Client": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "MurabahaContract",
+      "title": "Client",
       "type": "object",
-      "description": "Represents a Murabaha (بيع مؤجّل) contract.",
+      "description": "Represents a client (customer) of the merchant.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Murabaha contract."
-        },
-        "clientId": {
-          "type": "string",
-          "description": "Reference to the Client associated with this contract."
-        },
-        "goodsDescription": {
-          "type": "string",
-          "description": "Description of the goods being sold."
-        },
-        "units": {
-          "type": "number",
-          "description": "Number of units of the goods."
-        },
-        "price": {
-          "type": "number",
-          "description": "Price of the goods in the contract."
-        },
-        "paymentMethod": {
-          "type": "string",
-          "description": "Method of payment for the contract."
-        },
-        "startDate": {
-          "type": "string",
-          "description": "Start date of the contract.",
-          "format": "date-time"
-        },
-        "endDate": {
-          "type": "string",
-          "description": "End date of the contract.",
-          "format": "date-time"
-        },
-        "archived": {
-          "type": "boolean",
-          "description": "Indicates whether the contract is archived."
-        }
+        "id": { "type": "string", "description": "Unique identifier for the client." },
+        "name": { "type": "string", "description": "Name of the client." },
+        "phone": { "type": "string", "description": "Phone number of the client." },
+        "totalDue": { "type": "number", "description": "Aggregated amount from all their active contracts." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the client was created." },
+        "ownerId": { "type": "string", "description": "The UID of the merchant who owns this client record." }
       },
-      "required": [
-        "id",
-        "clientId",
-        "goodsDescription",
-        "units",
-        "price",
-        "paymentMethod",
-        "startDate",
-        "endDate",
-        "archived"
-      ]
+      "required": ["id", "name", "totalDue", "createdAt", "ownerId"]
     },
-    "MudarabahContract": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "MudarabahContract",
-      "type": "object",
-      "description": "Represents a Mudarabah (مضاربة) contract.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Mudarabah contract."
+    "Product": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Product",
+        "type": "object",
+        "description": "Represents a product the merchant sells.",
+        "properties": {
+            "id": { "type": "string", "description": "Unique identifier for the product." },
+            "name": { "type": "string", "description": "Name of the product." },
+            "purchasePrice": { "type": "number", "description": "The cost price of the product." },
+            "sellingPrice": { "type": "number", "description": "The selling price for deferred payment." },
+            "stock": { "type": "number", "description": "The quantity available in inventory." },
+            "ownerId": { "type": "string", "description": "The UID of the merchant who owns this product." }
         },
-        "clientId": {
-          "type": "string",
-          "description": "Reference to the Client associated with this contract. (Relationship: Client 1:N MudarabahContract)"
-        },
-        "profitSharingRatio": {
-          "type": "number",
-          "description": "Profit sharing ratio between the parties."
-        },
-        "capitalDetails": {
-          "type": "string",
-          "description": "Details of the capital invested."
-        },
-        "investmentArea": {
-          "type": "string",
-          "description": "Area of investment for the contract."
-        },
-        "startDate": {
-          "type": "string",
-          "description": "Start date of the contract.",
-          "format": "date-time"
-        },
-        "endDate": {
-          "type": "string",
-          "description": "End date of the contract.",
-          "format": "date-time"
-        },
-        "archived": {
-          "type": "boolean",
-          "description": "Indicates whether the contract is archived."
-        }
-      },
-      "required": [
-        "id",
-        "clientId",
-        "profitSharingRatio",
-        "capitalDetails",
-        "investmentArea",
-        "startDate",
-        "endDate",
-        "archived"
-      ]
+        "required": ["id", "name", "purchasePrice", "sellingPrice", "stock", "ownerId"]
     },
-    "MusharakahContract": {
+    "Transaction": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "MusharakahContract",
+      "title": "Transaction",
       "type": "object",
-      "description": "Represents a Musharakah (مشاركة) contract.",
+      "description": "Represents a single Murabaha (deferred payment) transaction.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Musharakah contract."
-        },
-        "clientId": {
-          "type": "string",
-          "description": "Reference to the Client who owns this contract."
-        },
-        "partnerIds": {
-          "type": "array",
-          "description": "References to the Partners involved in this contract. (Relationship: Partner N:N MusharakahContract)",
-          "items": {
-            "type": "string"
-          }
-        },
-        "contributions": {
-          "type": "string",
-          "description": "Details of each partner's contribution."
-        },
-        "ownershipPercentages": {
-          "type": "string",
-          "description": "Ownership percentages of each partner."
-        },
-        "profitLossDistribution": {
-          "type": "string",
-          "description": "Profit/loss distribution agreement."
-        },
-        "startDate": {
-          "type": "string",
-          "description": "Start date of the contract.",
-          "format": "date-time"
-        },
-        "endDate": {
-          "type": "string",
-          "description": "End date of the contract.",
-          "format": "date-time"
-        },
-        "archived": {
-          "type": "boolean",
-          "description": "Indicates whether the contract is archived."
-        }
+        "id": { "type": "string", "description": "Unique identifier for the transaction." },
+        "clientId": { "type": "string", "description": "ID of the client." },
+        "clientName": { "type": "string", "description": "Denormalized client name for quick display." },
+        "productId": { "type": "string", "description": "ID of the product." },
+        "productName": { "type": "string", "description": "Denormalized product name for quick display." },
+        "quantity": { "type": "number" },
+        "purchasePrice": { "type": "number", "description": "Purchase price per unit at time of transaction." },
+        "sellingPrice": { "type": "number", "description": "Selling price per unit at time of transaction." },
+        "totalAmount": { "type": "number", "description": "Total selling price for the transaction (quantity * sellingPrice)." },
+        "profit": { "type": "number", "description": "Profit for the transaction." },
+        "issueDate": { "type": "string", "format": "date-time" },
+        "dueDate": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["active", "completed", "overdue", "archived"] },
+        "paidAmount": { "type": "number", "description": "Amount paid by the client so far." },
+        "remainingAmount": { "type": "number", "description": "Remaining amount to be paid." },
+        "ownerId": { "type": "string", "description": "The UID of the merchant who owns this transaction." }
       },
-      "required": [
-        "id",
-        "clientId",
-        "partnerIds",
-        "contributions",
-        "ownershipPercentages",
-        "profitLossDistribution",
-        "startDate",
-        "endDate",
-        "archived"
-      ]
-    },
-    "WakalahContract": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "WakalahContract",
-      "type": "object",
-      "description": "Represents a Wakalah (وكالة بأجر) contract.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Wakalah contract."
-        },
-        "clientId": {
-          "type": "string",
-          "description": "Reference to the Client associated with this contract. (Relationship: Client 1:N WakalahContract)"
-        },
-        "agentId": {
-          "type": "string",
-          "description": "Reference to the Agent acting on behalf of the client. (Relationship: Agent 1:N WakalahContract)"
-        },
-        "agencyType": {
-          "type": "string",
-          "description": "Type of agency agreement."
-        },
-        "duration": {
-          "type": "string",
-          "description": "Duration of the agency agreement."
-        },
-        "agentFeeStructure": {
-          "type": "string",
-          "description": "Fee structure for the agent's services."
-        },
-        "startDate": {
-          "type": "string",
-          "description": "Start date of the contract.",
-          "format": "date-time"
-        },
-        "endDate": {
-          "type": "string",
-          "description": "End date of the contract.",
-          "format": "date-time"
-        },
-        "archived": {
-          "type": "boolean",
-          "description": "Indicates whether the contract is archived."
-        }
-      },
-      "required": [
-        "id",
-        "clientId",
-        "agentId",
-        "agencyType",
-        "duration",
-        "agentFeeStructure",
-        "startDate",
-        "endDate",
-        "archived"
-      ]
-    },
-    "CommodityCard": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "CommodityCard",
-      "type": "object",
-      "description": "Represents a commodity card.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the commodity card."
-        },
-        "cardNumber": {
-          "type": "string",
-          "description": "Card number of the commodity card."
-        },
-        "nominalValue": {
-          "type": "number",
-          "description": "Nominal value of the commodity card."
-        },
-        "issuingBody": {
-          "type": "string",
-          "description": "Issuing body of the commodity card."
-        },
-        "status": {
-          "type": "string",
-          "description": "Status of the commodity card (e.g., active, inactive)."
-        }
-      },
-      "required": [
-        "id",
-        "cardNumber",
-        "nominalValue",
-        "issuingBody",
-        "status"
-      ]
-    },
-    "Agent": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Agent",
-      "type": "object",
-      "description": "Represents an agent.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the agent."
-        },
-        "name": {
-          "type": "string",
-          "description": "Name of the agent."
-        },
-        "contactInformation": {
-          "type": "string",
-          "description": "Contact information of the agent."
-        }
-      },
-      "required": [
-        "id",
-        "name",
-        "contactInformation"
-      ]
-    },
-    "Partner": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Partner",
-      "type": "object",
-      "description": "Represents a partner.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the partner."
-        },
-        "name": {
-          "type": "string",
-          "description": "Name of the partner."
-        },
-        "contactInformation": {
-          "type": "string",
-          "description": "Contact information of the partner."
-        }
-      },
-      "required": [
-        "id",
-        "name",
-        "contactInformation"
-      ]
+      "required": ["id", "clientId", "clientName", "productId", "productName", "quantity", "purchasePrice", "sellingPrice", "totalAmount", "profit", "issueDate", "dueDate", "status", "paidAmount", "remainingAmount", "ownerId"]
     }
   },
   "auth": {
@@ -366,145 +82,29 @@
       {
         "path": "/users/{userId}",
         "definition": {
-          "entityName": "User",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "Stores user profile information. User's auth UID is used as the document ID.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            }
-          ]
+          "schema": { "$ref": "#/entities/User" },
+          "description": "Stores user profile information. User's auth UID is used as the document ID."
         }
       },
       {
-        "path": "/clients/{clientId}/murabahaContracts/{murabahaContractId}",
+        "path": "/users/{userId}/clients/{clientId}",
         "definition": {
-          "entityName": "MurabahaContract",
-          "schema": {
-            "$ref": "#/backend/entities/MurabahaContract"
-          },
-          "description": "Stores Murabaha contracts associated with a client. Includes denormalized 'clientId' for authorization independence.",
-          "params": [
-            {
-              "name": "clientId",
-              "description": "The unique identifier for the client."
-            },
-            {
-              "name": "murabahaContractId",
-              "description": "The unique identifier for the Murabaha contract."
-            }
-          ]
+          "schema": { "$ref": "#/entities/Client" },
+          "description": "Stores client information for a specific merchant."
+        }
+      },
+       {
+        "path": "/users/{userId}/products/{productId}",
+        "definition": {
+          "schema": { "$ref": "#/entities/Product" },
+          "description": "Stores product and inventory information for a specific merchant."
         }
       },
       {
-        "path": "/clients/{clientId}/mudarabahContracts/{mudarabahContractId}",
+        "path": "/users/{userId}/transactions/{transactionId}",
         "definition": {
-          "entityName": "MudarabahContract",
-          "schema": {
-            "$ref": "#/backend/entities/MudarabahContract"
-          },
-          "description": "Stores Mudarabah contracts associated with a client. Includes denormalized 'clientId' for authorization independence.",
-          "params": [
-            {
-              "name": "clientId",
-              "description": "The unique identifier for the client."
-            },
-            {
-              "name": "mudarabahContractId",
-              "description": "The unique identifier for the Mudarabah contract."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/clients/{clientId}/musharakahContracts/{musharakahContractId}",
-        "definition": {
-          "entityName": "MusharakahContract",
-          "schema": {
-            "$ref": "#/backend/entities/MusharakahContract"
-          },
-          "description": "Stores Musharakah contracts associated with a client. The 'clientId' is used for authorization.",
-          "params": [
-             {
-              "name": "clientId",
-              "description": "The unique identifier for the client."
-            },
-            {
-              "name": "musharakahContractId",
-              "description": "The unique identifier for the Musharakah contract."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/clients/{clientId}/wakalahContracts/{wakalahContractId}",
-        "definition": {
-          "entityName": "WakalahContract",
-          "schema": {
-            "$ref": "#/backend/entities/WakalahContract"
-          },
-          "description": "Stores Wakalah contracts associated with a client. Includes denormalized 'clientId' for authorization independence.",
-          "params": [
-            {
-              "name": "clientId",
-              "description": "The unique identifier for the client."
-            },
-            {
-              "name": "wakalahContractId",
-              "description": "The unique identifier for the Wakalah contract."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/commodityCards/{commodityCardId}",
-        "definition": {
-          "entityName": "CommodityCard",
-          "schema": {
-            "$ref": "#/backend/entities/CommodityCard"
-          },
-          "description": "Stores commodity card information.",
-          "params": [
-            {
-              "name": "commodityCardId",
-              "description": "The unique identifier for the commodity card."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/agents/{agentId}",
-        "definition": {
-          "entityName": "Agent",
-          "schema": {
-            "$ref": "#/backend/entities/Agent"
-          },
-          "description": "Stores agent information. Agent ID is used as the document ID.",
-          "params": [
-            {
-              "name": "agentId",
-              "description": "The unique identifier for the agent."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/partners/{partnerId}",
-        "definition": {
-          "entityName": "Partner",
-          "schema": {
-            "$ref": "#/backend/entities/Partner"
-          },
-          "description": "Stores partner information. Partner ID is used as the document ID.",
-          "params": [
-            {
-              "name": "partnerId",
-              "description": "The unique identifier for the partner."
-            }
-          ]
+          "schema": { "$ref": "#/entities/Transaction" },
+          "description": "Stores all transactions for a specific merchant."
         }
       }
     ]

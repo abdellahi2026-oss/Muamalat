@@ -39,7 +39,7 @@ service cloud.firestore {
      * @path /users/{userId}
      */
     match /users/{userId} {
-      allow get: if isOwner(userId) || isAdmin();
+      allow read: if isOwner(userId) || isAdmin();
       allow create: if isOwner(userId) || isAdmin(); // Allow admin to create users
       allow update: if isOwner(userId) || isAdmin(); // A user can update their own profile, or an admin can.
       allow list: if isAdmin(); // Only admins can list all users.
@@ -47,53 +47,35 @@ service cloud.firestore {
     }
 
     // --------------------------------------------------------------------------------
-    // User-Owned Data (Contracts)
+    // Merchant-Owned Data (Clients, Products, Transactions)
     // --------------------------------------------------------------------------------
 
     /**
-     * @description Secures all user-owned contracts (Murabaha, Mudarabah, Wakalah, Musharakah) in their respective subcollections.
-     * @path /clients/{clientId}/{contractCollection}/{contractId}
-     * @principle Enforces strict data ownership for all documents within a user's data tree.
-     * A user can only read/write to their own subcollections.
+     * @description Secures a merchant's clients subcollection.
+     * @path /users/{userId}/clients/{clientId}
      */
-    match /clients/{clientId}/{contractCollection}/{contractId} {
-        // Read Rule: Allow reading if the user is the owner of the client document.
-        allow read: if isOwner(clientId);
-
-        // Write Rule: Allow writing if the user is the owner AND the data being written has the correct clientId.
-        // This prevents a user from creating a contract under their own ID but with another user's clientId field.
-        allow write: if isOwner(clientId) && request.resource.data.clientId == clientId;
-    }
-
-    // --------------------------------------------------------------------------------
-    // Public Reference Data (Read-Only for all signed-in users)
-    // --------------------------------------------------------------------------------
-
-    /**
-     * @description Commodity cards are public reference data, readable by any signed-in user but not writable by clients.
-     * @path /commodityCards/{commodityCardId}
-     */
-    match /commodityCards/{commodityCardId} {
-      allow get, list: if isSignedIn();
-      allow write: if false; 
+    match /users/{userId}/clients/{clientId} {
+      allow read, list: if isOwner(userId);
+      // Allow write if user is the owner and the data being written has the correct ownerId.
+      allow write: if isOwner(userId) && request.resource.data.ownerId == userId;
     }
 
     /**
-     * @description Agent information is public reference data.
-     * @path /agents/{agentId}
+     * @description Secures a merchant's products subcollection.
+     * @path /users/{userId}/products/{productId}
      */
-    match /agents/{agentId} {
-      allow get, list: if isSignedIn();
-      allow write: if false;
+    match /users/{userId}/products/{productId} {
+      allow read, list: if isOwner(userId);
+      allow write: if isOwner(userId) && request.resource.data.ownerId == userId;
     }
 
     /**
-     * @description Partner information is public reference data.
-     * @path /partners/{partnerId}
+     * @description Secures a merchant's transactions subcollection.
+     * @path /users/{userId}/transactions/{transactionId}
      */
-    match /partners/{partnerId} {
-      allow get, list: if isSignedIn();
-      allow write: if false;
+    match /users/{userId}/transactions/{transactionId} {
+      allow read, list: if isOwner(userId);
+      allow write: if isOwner(userId) && request.resource.data.ownerId == userId;
     }
   }
 }

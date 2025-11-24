@@ -26,10 +26,12 @@ export function Header() {
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    // The new structure doesn't have a central search page like 'commodities'.
+    // We will search on the clients page.
     if (searchTerm.trim()) {
-      router.push(`/commodities?q=${encodeURIComponent(searchTerm.trim())}`);
+      router.push(`/clients?q=${encodeURIComponent(searchTerm.trim())}`);
     } else {
-        router.push(`/commodities`);
+        router.push(`/clients`);
     }
   };
 
@@ -61,7 +63,7 @@ export function Header() {
               <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input 
-                      placeholder="بحث في المعاملات..." 
+                      placeholder="بحث عن زبون..." 
                       className="w-full rounded-lg bg-background text-foreground pl-10 md:w-[200px] lg:w-[320px]"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
@@ -87,7 +89,7 @@ export function Header() {
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input 
-                            placeholder="بحث في المعاملات..." 
+                            placeholder="بحث عن زبون..." 
                             className="w-full rounded-lg bg-background text-foreground pl-10"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}

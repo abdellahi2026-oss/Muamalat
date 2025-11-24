@@ -11,61 +11,50 @@ export type User = {
   lastSignInTime?: string;
 };
 
-export type Contract = {
+// Represents a client (customer)
+export type Client = {
+    id: string;
+    name: string;
+    phone?: string;
+    totalDue: number; // Aggregated amount from all their active contracts
+    createdAt: string;
+};
+
+// Represents a product the merchant sells
+export type Product = {
+    id: string;
+    name: string;
+    purchasePrice: number;
+    sellingPrice: number;
+    stock: number;
+    ownerId: string;
+}
+
+// Represents a single transaction or contract (Murabaha)
+export type Transaction = {
   id: string;
   clientId: string;
-  clientName: string;
-  clientPhone?: string;
-  startDate: string;
-  endDate: string;
+  clientName: string; // Denormalized for easy display
+  productId: string;
+  productName: string; // Denormalized for easy display
+  
+  quantity: number;
+  purchasePrice: number; // At the time of transaction
+  sellingPrice: number; // At the time of transaction
+
+  totalAmount: number; // quantity * sellingPrice
+  profit: number; // (sellingPrice - purchasePrice) * quantity
+  
+  issueDate: string;
+  dueDate: string;
+  
   status: ContractStatus;
-  amount: number;
+  
+  paidAmount: number;
+  remainingAmount: number;
+
+  ownerId: string;
 };
 
-export type MurabahaContract = Contract & {
-  type: 'murabaha';
-  goods: string;
-  units: number;
-  purchasePrice: number;
-  sellingPrice: number;
-  paymentMethod: string;
-  commodityCardId?: string;
-};
-
-export type MudarabahContract = Contract & {
-  type: 'mudarabah';
-  profitSharingRatio: {
-    investor: number;
-    manager: number;
-  };
-  capital: number;
-  investmentArea: string;
-};
-
-export type MusharakahContract = Contract & {
-  type: 'musharakah';
-  partnerIds: string[];
-  profitDistribution: string;
-};
-
-export type WakalahContract = Contract & {
-  type: 'wakalah';
-  agentName: string;
-  agencyType: string;
-  duration: string;
-  feeStructure: string;
-};
-
-export type AnyContract = MurabahaContract | MudarabahContract | MusharakahContract | WakalahContract;
-
-export type CommodityCard = {
-  id: string;
-  cardNumber: string;
-  nominalValue: number;
-  issuingBody: string;
-  status: 'available' | 'in-use' | 'expired';
-};
-
-    
-
-    
+// This will be the only contract type for now to follow the new specs.
+export type AnyContract = Transaction;
