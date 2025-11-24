@@ -9,7 +9,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,9 +23,9 @@ import {
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { PlusCircle, Loader2, ArrowLeft, ShoppingCart, Calendar, Info } from 'lucide-react';
+import { Loader2, ArrowLeft, ShoppingCart, Calendar, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { collection, addDoc, doc, setDoc, writeBatch, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, writeBatch } from 'firebase/firestore';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { Combobox } from './ui/combobox';
 import type { Client, Product, Transaction } from '@/lib/types';
@@ -68,9 +67,13 @@ const stepTwoSchema = z.object({
 type StepOneValues = z.infer<typeof stepOneSchema>;
 type StepTwoValues = z.infer<typeof stepTwoSchema>;
 
+interface AddTransactionDialogProps {
+    isOpen: boolean;
+    setIsOpen: (open: boolean) => void;
+    onSuccess?: () => void;
+}
 
-export function AddTransactionDialog() {
-  const [open, setOpen] = useState(false);
+export function AddTransactionDialog({ isOpen, setIsOpen, onSuccess }: AddTransactionDialogProps) {
   const [step, setStep] = useState(1);
   const { toast } = useToast();
   const { firestore, user } = useFirebase();
@@ -89,20 +92,18 @@ export function AddTransactionDialog() {
   const selectedProductId = stepOneForm.watch('productId');
   const { quantity } = stepTwoForm.watch();
 
-  // Data fetching
   const clientsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return collection(firestore, 'users', user.uid, 'clients');
   }, [firestore, user?.uid]);
-  const { data: clients } = useCollection<Client>(clientsQuery);
+  const { data: clients, refetch: refetchClients } = useCollection<Client>(clientsQuery);
 
   const productsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return collection(firestore, 'users', user.uid, 'products');
   }, [firestore, user?.uid]);
-  const { data: products } = useCollection<Product>(productsQuery);
+  const { data: products, refetch: refetchProducts } = useCollection<Product>(productsQuery);
 
-  // Memoized options for comboboxes
   const clientOptions = useMemo(() => {
     const options = (clients || []).map(c => ({ value: c.id, label: c.name }));
     options.unshift({ value: 'new-client', label: 'إضافة زبون جديد...' });
@@ -128,9 +129,15 @@ export function AddTransactionDialog() {
     stepTwoForm.reset();
     setStep(1);
   };
+  
+  useEffect(() => {
+      if (isOpen) {
+        if(refetchClients) refetchClients();
+        if(refetchProducts) refetchProducts();
+      }
+  }, [isOpen, refetchClients, refetchProducts]);
 
   const onSubmit = async () => {
-    // Validate both forms before submitting
     const isStepOneValid = await stepOneForm.trigger();
     const isStepTwoValid = await stepTwoForm.trigger();
     if (!isStepOneValid || !isStepTwoValid) {
@@ -155,7 +162,6 @@ export function AddTransactionDialog() {
     let finalClientId = clientId;
     let finalClientName = clients?.find(c => c.id === clientId)?.name || '';
 
-    // 1. Create new client if necessary
     if (clientId === 'new-client') {
       const newClientRef = doc(collection(firestore, 'users', user.uid, 'clients'));
       finalClientId = newClientRef.id;
@@ -171,7 +177,6 @@ export function AddTransactionDialog() {
       batch.set(newClientRef, newClient);
     }
 
-    // 2. Create the transaction
     const newTransactionRef = doc(collection(firestore, 'users', user.uid, 'transactions'));
     const issueDate = new Date();
     let dueDate: Date;
@@ -201,11 +206,9 @@ export function AddTransactionDialog() {
     };
     batch.set(newTransactionRef, newTransaction);
     
-    // 3. Update product stock
     const productRef = doc(firestore, 'users', user.uid, 'products', selectedProduct.id);
     batch.update(productRef, { stock: selectedProduct.stock - quantity });
     
-    // 4. Update client's totalDue if it's an existing client
     if (clientId !== 'new-client') {
         const clientRef = doc(firestore, 'users', user.uid, 'clients', finalClientId);
         const existingClient = clients?.find(c => c.id === finalClientId);
@@ -219,8 +222,9 @@ export function AddTransactionDialog() {
             title: 'تمت إضافة المعاملة بنجاح!',
             description: `تم إنشاء معاملة جديدة لـ ${finalClientName}.`,
         });
-        setOpen(false);
+        setIsOpen(false);
         resetForms();
+        if (onSuccess) onSuccess();
     } catch (error) {
       console.error('Error adding transaction: ', error);
       toast({
@@ -235,13 +239,7 @@ export function AddTransactionDialog() {
   const paymentDurationValue = stepTwoForm.watch('paymentDuration');
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForms(); }}>
-      <DialogTrigger asChild>
-        <Button variant="secondary">
-          <PlusCircle className="me-2" />
-          إضافة معاملة
-        </Button>
-      </DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={(o) => { setIsOpen(o); if (!o) resetForms(); }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center">
@@ -418,7 +416,7 @@ export function AddTransactionDialog() {
         )}
 
         <DialogFooter>
-           <Button type="button" variant="outline" onClick={() => setOpen(false)}>إلغاء</Button>
+           <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>إلغاء</Button>
            {step === 1 && (
             <Button type="submit" form="stepOneForm" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}

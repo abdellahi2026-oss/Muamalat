@@ -13,21 +13,28 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
-import { Menu, Search } from 'lucide-react';
+import { Menu, Search, Plus, ChevronDown, HandCoins } from 'lucide-react';
 import { AddTransactionDialog } from './add-transaction-dialog';
+import { RegisterPaymentDialog } from './register-payment-dialog';
 import { Input } from './ui/input';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export function Header() {
   const [searchTerm, setSearchTerm] = useState('');
   const router = useRouter();
+  const [isTransactionOpen, setTransactionOpen] = useState(false);
+  const [isPaymentOpen, setPaymentOpen] = useState(false);
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // The new structure doesn't have a central search page like 'commodities'.
-    // We will search on the clients page.
     if (searchTerm.trim()) {
       router.push(`/clients?q=${encodeURIComponent(searchTerm.trim())}`);
     } else {
@@ -37,6 +44,7 @@ export function Header() {
 
 
   return (
+    <>
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-primary px-4 text-primary-foreground backdrop-blur-sm sm:px-6 lg:px-8">
       <Link href="/" className="flex items-center gap-2" aria-label="Home">
         <Button
@@ -70,7 +78,27 @@ export function Header() {
                   />
               </div>
             </form>
-        <AddTransactionDialog />
+
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="secondary">
+                    <Plus className="me-2"/>
+                    <span>إضافة</span>
+                    <ChevronDown className="ms-2 size-4"/>
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={() => setTransactionOpen(true)}>
+                    <Plus className="me-2"/>
+                    معاملة جديدة
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setPaymentOpen(true)}>
+                    <HandCoins className="me-2"/>
+                    تسجيل دفعة
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
+
         <UserNav />
         <Sheet>
             <SheetTrigger asChild>
@@ -101,5 +129,8 @@ export function Header() {
         </Sheet>
       </div>
     </header>
+     <AddTransactionDialog isOpen={isTransactionOpen} setIsOpen={setTransactionOpen} />
+     <RegisterPaymentDialog isOpen={isPaymentOpen} setIsOpen={setPaymentOpen} />
+    </>
   );
 }
