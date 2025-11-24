@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -29,6 +29,7 @@ import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, writeBatch, getDoc } from 'firebase/firestore';
 import type { Transaction, Product, Client } from '@/lib/types';
 import { format, parseISO } from 'date-fns';
+import { ar } from 'date-fns/locale';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar as CalendarPicker } from './ui/calendar';
 import { cn } from '@/lib/utils';

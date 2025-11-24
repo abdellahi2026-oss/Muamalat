@@ -21,6 +21,7 @@ import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
+  ChartConfig,
 } from '@/components/ui/chart';
 import { PieChart, Pie } from 'recharts';
 import { Badge } from '@/components/ui/badge';
@@ -36,7 +37,7 @@ import {
 import type { Transaction } from '@/lib/types';
 import { format, addDays, startOfDay, endOfDay } from 'date-fns';
 import { ar } from 'date-fns/locale';
-import { useCollection, useFirebase } from '@/firebase';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
@@ -58,7 +59,7 @@ export default function DashboardPage() {
     const { firestore, user } = useFirebase();
     const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
-    const transactionsQuery = useMemo(() => {
+    const transactionsQuery = useMemoFirebase(() => {
         if (!firestore || !user?.uid) return null;
         return collection(firestore, 'users', user.uid, 'transactions');
     }, [firestore, user?.uid]);

@@ -9,11 +9,12 @@ import {
   Home,
   Package,
   FileText,
+  Users,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import type { User } from '@/lib/types';
+import type { User as UserType } from '@/lib/types';
 
 
 export function MainNav() {
@@ -25,7 +26,7 @@ export function MainNav() {
     return doc(firestore, 'users', user.uid);
   }, [user, firestore]);
   
-  const { data: userData, isLoading: isUserDocLoading } = useDoc<User>(userDocRef);
+  const { data: userData, isLoading: isUserDocLoading } = useDoc<UserType>(userDocRef);
 
   const isAdmin = userData?.role === 'admin';
 
@@ -38,7 +39,7 @@ export function MainNav() {
     { href: '/clients', label: 'الزبائن', icon: CustomersIcon, isActive: pathname.startsWith('/clients') },
     { href: '/products', label: 'المنتجات', icon: Package, isActive: pathname.startsWith('/products') },
     { href: '/transactions', label: 'المعاملات', icon: FileText, isActive: pathname.startsWith('/transactions') },
-    ...(isAdmin ? [{ href: '/users', label: 'المستخدمين', icon: 'Users' as any, isActive: pathname.startsWith('/users') }] : [])
+    ...(isAdmin ? [{ href: '/users', label: 'المستخدمين', icon: Users, isActive: pathname.startsWith('/users') }] : [])
   ];
 
   return (

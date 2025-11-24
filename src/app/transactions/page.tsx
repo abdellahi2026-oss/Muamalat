@@ -30,7 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useCollection, useFirebase } from '@/firebase';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, query, where, deleteDoc, doc } from 'firebase/firestore';
 import type { Transaction } from '@/lib/types';
 import { Loader2, MoreVertical, Edit, Trash2, SlidersHorizontal, ArrowLeft, X } from 'lucide-react';
@@ -141,7 +141,7 @@ export default function TransactionsPage() {
     }
   }, [searchParams]);
 
-  const transactionsQuery = useMemo(() => {
+  const transactionsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return collection(firestore, 'users', user.uid, 'transactions');
   }, [firestore, user?.uid]);
