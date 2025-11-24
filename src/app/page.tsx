@@ -92,13 +92,15 @@ export default function DashboardPage() {
 
         const totalDue = (allTransactions || []).filter(t => t.status === 'active' || t.status === 'overdue').reduce((sum, t) => sum + t.remainingAmount, 0);
         
-        const overdueCount = active.length > 0 ? active.filter(t => t.status === 'overdue').length : 0;
+        const overdueCount = (allTransactions || []).filter(t => t.status === 'overdue').length;
+        const activeButNotOverdueCount = (allTransactions || []).filter(t => t.status === 'active').length;
+
 
         return { 
             profit, 
             totalDue, 
             overdueCount, 
-            activeCount: active.length, 
+            activeCount: activeButNotOverdueCount, 
             completedCount: completed.length 
         };
     }, [filteredTransactions, allTransactions, dateRange]);
@@ -183,42 +185,48 @@ export default function DashboardPage() {
                         </p>
                     </CardContent>
                 </Card>
-                 <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">المعاملات النشطة</CardTitle>
-                    <Activity className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{isLoading ? <Loader2 className="size-6 animate-spin"/> : `+${stats.activeCount}`}</div>
-                    <p className="text-xs text-muted-foreground">
-                      {dateRange?.from ? 'في الفترة المحددة' : 'التي لم تكتمل بعد'}
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card>
+                 <Link href="/transactions?status=active" className="block hover:bg-muted/50 rounded-lg">
+                    <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">المعاملات المتأخرة</CardTitle>
-                        <AlertCircle className="h-4 w-4 text-red-500" />
+                        <CardTitle className="text-sm font-medium">المعاملات النشطة</CardTitle>
+                        <Activity className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{isLoading ? <Loader2 className="size-6 animate-spin"/> : `+${stats.overdueCount}`}</div>
+                        <div className="text-2xl font-bold">{isLoading ? <Loader2 className="size-6 animate-spin"/> : `+${stats.activeCount}`}</div>
                         <p className="text-xs text-muted-foreground">
-                        {dateRange?.from ? 'في الفترة المحددة' : 'تجاوزت تاريخ الاستحقاق'}
+                        التي لم تكتمل بعد (لا يشمل المتأخرة)
                         </p>
                     </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">المعاملات المكتملة</CardTitle>
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{isLoading ? <Loader2 className="size-6 animate-spin"/> : `+${stats.completedCount}`}</div>
-                        <p className="text-xs text-muted-foreground">
-                        {dateRange?.from ? 'في الفترة المحددة' : 'التي تم سدادها بالكامل'}
-                        </p>
-                    </CardContent>
-                </Card>
+                    </Card>
+                 </Link>
+                <Link href="/transactions?status=overdue" className="block hover:bg-muted/50 rounded-lg">
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">المعاملات المتأخرة</CardTitle>
+                            <AlertCircle className="h-4 w-4 text-red-500" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{isLoading ? <Loader2 className="size-6 animate-spin"/> : `+${stats.overdueCount}`}</div>
+                            <p className="text-xs text-muted-foreground">
+                            تجاوزت تاريخ الاستحقاق (لا يتأثر بالفلتر)
+                            </p>
+                        </CardContent>
+                    </Card>
+                </Link>
+                 <Link href="/transactions?status=completed" className="block hover:bg-muted/50 rounded-lg">
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">المعاملات المكتملة</CardTitle>
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{isLoading ? <Loader2 className="size-6 animate-spin"/> : `+${stats.completedCount}`}</div>
+                            <p className="text-xs text-muted-foreground">
+                            {dateRange?.from ? 'في الفترة المحددة' : 'التي تم سدادها بالكامل'}
+                            </p>
+                        </CardContent>
+                    </Card>
+                 </Link>
             </CardContent>
         </Card>
 
@@ -289,5 +297,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    

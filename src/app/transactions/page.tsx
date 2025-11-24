@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -33,7 +34,7 @@ import { useCollection, useFirebase } from '@/firebase';
 import { collection, query, where, deleteDoc, doc } from 'firebase/firestore';
 import type { Transaction } from '@/lib/types';
 import { Loader2, MoreVertical, Edit, Trash2, SlidersHorizontal, ArrowLeft, X } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { format, formatDistanceToNow, startOfDay, endOfDay } from 'date-fns';
@@ -126,11 +127,19 @@ function TransactionActions({ transaction, onEdit, onDelete }: { transaction: Tr
 export default function TransactionsPage() {
   const { firestore, user } = useFirebase();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
 
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [editTransaction, setEditTransaction] = useState<Transaction | null>(null);
+
+  useEffect(() => {
+    const statusFromUrl = searchParams.get('status');
+    if (statusFromUrl && ['active', 'overdue', 'completed', 'archived'].includes(statusFromUrl)) {
+      setStatusFilter(statusFromUrl);
+    }
+  }, [searchParams]);
 
   const transactionsQuery = useMemo(() => {
     if (!firestore || !user?.uid) return null;
@@ -182,6 +191,7 @@ export default function TransactionsPage() {
   const clearFilters = () => {
     setDateRange(undefined);
     setStatusFilter('all');
+    router.replace('/transactions'); // Remove query params from URL
   };
 
   const hasFilters = dateRange !== undefined || statusFilter !== 'all';
