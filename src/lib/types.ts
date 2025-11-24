@@ -1,5 +1,4 @@
 
-
 export type ContractStatus = 'active' | 'completed' | 'overdue' | 'archived';
 
 export type User = {
@@ -18,6 +17,7 @@ export type Client = {
     phone?: string;
     totalDue: number; // Aggregated amount from all their active contracts
     createdAt: string;
+    ownerId: string;
 };
 
 // Represents a product the merchant sells

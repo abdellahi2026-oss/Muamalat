@@ -152,14 +152,15 @@ export function AddTransactionDialog() {
       const newClientRef = doc(collection(firestore, 'users', user.uid, 'clients'));
       finalClientId = newClientRef.id;
       finalClientName = newClientName!;
-      batch.set(newClientRef, {
+      const newClient: Client = {
         id: finalClientId,
         name: finalClientName,
         phone: newClientPhone || '',
         totalDue: totalAmount,
         createdAt: new Date().toISOString(),
         ownerId: user.uid,
-      });
+      };
+      batch.set(newClientRef, newClient);
     }
 
     // 2. Create the transaction
