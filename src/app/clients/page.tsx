@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -36,8 +35,7 @@ const formatCurrency = (amount: number) => {
 };
 
 export default function ClientsPage() {
-  const firestore = useFirestore();
-  const { user } = useFirebase();
+  const { firestore, user } = useFirebase();
   const searchParams = useSearchParams();
   const router = useRouter();
   const searchQuery = searchParams.get('q');

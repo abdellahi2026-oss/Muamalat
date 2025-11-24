@@ -27,17 +27,16 @@ import {
 import {
   useCollection,
   useDoc,
-  useFirestore,
-  useMemoFirebase,
   useFirebase,
+  useMemoFirebase,
 } from '@/firebase';
 import { collection, doc, query, where, writeBatch, getDoc } from 'firebase/firestore';
 import type { Client, Transaction, Product } from '@/lib/types';
-import { Loader2, ArrowLeft, Phone, User, HandCoins, MoreVertical, Edit, Trash2 } from 'lucide-react';
+import { Loader2, ArrowLeft, Phone, User, HandCoins, MoreVertical, Edit, Trash2, CheckCircle, Undo2 } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { format, formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { Progress } from '@/components/ui/progress';
 import {
@@ -49,7 +48,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -189,8 +187,10 @@ function RegisterPaymentDialog({ client, transactions, onPaymentSuccess }: { cli
     )
 }
 
-function TransactionActions({ transaction, onEdit, onDelete }: { transaction: Transaction, onEdit: () => void, onDelete: () => void }) {
+function TransactionActions({ transaction, onEdit, onDelete, onStatusChange }: { transaction: Transaction, onEdit: () => void, onDelete: () => void, onStatusChange: (status: 'completed' | 'active') => void }) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
+  const [isReopenDialogOpen, setIsReopenDialogOpen] = useState(false);
 
   return (
     <>
@@ -205,6 +205,18 @@ function TransactionActions({ transaction, onEdit, onDelete }: { transaction: Tr
             <Edit className="me-2 h-4 w-4" />
             تعديل
           </DropdownMenuItem>
+           {transaction.status === 'active' || transaction.status === 'overdue' ? (
+             <DropdownMenuItem onSelect={() => setIsCompleteDialogOpen(true)}>
+                <CheckCircle className="me-2 h-4 w-4" />
+                <span>إنهاء العقد</span>
+            </DropdownMenuItem>
+          ) : null}
+          {transaction.status === 'completed' && (
+             <DropdownMenuItem onSelect={() => setIsReopenDialogOpen(true)}>
+                <Undo2 className="me-2 h-4 w-4" />
+                <span>إعادة فتح العقد</span>
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="text-red-500">
             <Trash2 className="me-2 h-4 w-4" />
             حذف
@@ -217,7 +229,7 @@ function TransactionActions({ transaction, onEdit, onDelete }: { transaction: Tr
           <AlertDialogHeader>
             <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
             <AlertDialogDescription>
-              سيؤدي هذا إلى حذف المعاملة نهائيًا. لا يمكن التراجع عن هذا الإجراء.
+              سيؤدي هذا إلى حذف المعاملة نهائيًا وإعادة الكمية إلى المخزون. لا يمكن التراجع عن هذا الإجراء.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -225,6 +237,36 @@ function TransactionActions({ transaction, onEdit, onDelete }: { transaction: Tr
             <AlertDialogAction onClick={onDelete} className="bg-destructive hover:bg-destructive/90">
               حذف
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      <AlertDialog open={isCompleteDialogOpen} onOpenChange={setIsCompleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>هل أنت متأكد من إنهاء العقد؟</AlertDialogTitle>
+             <AlertDialogDescription>
+              سيؤدي هذا الإجراء إلى تغيير حالة العقد إلى "مكتمل".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { onStatusChange('completed'); setIsCompleteDialogOpen(false); }}>تأكيد</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={isReopenDialogOpen} onOpenChange={setIsReopenDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>هل أنت متأكد من إعادة فتح العقد؟</AlertDialogTitle>
+             <AlertDialogDescription>
+              سيؤدي هذا الإجراء إلى تغيير حالة العقد إلى "نشط".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { onStatusChange('active'); setIsReopenDialogOpen(false); }}>تأكيد</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -264,6 +306,20 @@ export default function ClientDetailPage() {
     if (refetchClient) refetchClient();
     if (refetchTransactions) refetchTransactions();
   }
+  
+  const handleStatusChange = async (transaction: Transaction, newStatus: 'completed' | 'active') => {
+      if (!firestore || !user) return;
+      const transactionRef = doc(firestore, 'users', user.uid, 'transactions', transaction.id);
+      try {
+          await writeBatch(firestore).update(transactionRef, { status: newStatus }).commit();
+          toast({ title: 'تم تحديث حالة المعاملة بنجاح' });
+          handleSuccess();
+      } catch (e) {
+        console.error(e);
+        toast({ variant: 'destructive', title: 'فشل تحديث حالة المعاملة' });
+      }
+  }
+
 
   const handleDeleteTransaction = async (transaction: Transaction) => {
     if (!firestore || !user) return;
@@ -364,6 +420,7 @@ export default function ClientDetailPage() {
       <Card>
         <CardHeader>
           <CardTitle>سجل المعاملات</CardTitle>
+           <CardDescription>جميع المعاملات المسجلة لهذا الزبون. يمكنك تعديل أو حذف معاملة من قائمة الإجراءات.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -406,6 +463,7 @@ export default function ClientDetailPage() {
                         transaction={t} 
                         onEdit={() => setEditTransaction(t)}
                         onDelete={() => handleDeleteTransaction(t)}
+                        onStatusChange={(newStatus) => handleStatusChange(t, newStatus)}
                     />
                   </TableCell>
                 </TableRow>
