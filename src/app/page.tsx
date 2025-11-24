@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Card,
   CardContent,
@@ -21,9 +21,8 @@ import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  ChartConfig,
 } from '@/components/ui/chart';
-import { Pie, PieChart, Cell, Tooltip } from 'recharts';
+import { PieChart, Pie } from 'recharts';
 import { Badge } from '@/components/ui/badge';
 import {
   AlertCircle,
@@ -31,14 +30,19 @@ import {
   TrendingUp,
   CreditCard,
   Activity,
+  CheckCircle,
+  X,
 } from 'lucide-react';
 import type { Transaction } from '@/lib/types';
-import { format, addDays } from 'date-fns';
+import { format, addDays, startOfDay, endOfDay } from 'date-fns';
 import { ar } from 'date-fns/locale';
-import { useCollection, useFirestore, useMemoFirebase, useFirebase } from '@/firebase';
+import { useCollection, useFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
+import { DateRangePicker } from '@/components/date-range-picker';
+import type { DateRange } from 'react-day-picker';
+import { Button } from '@/components/ui/button';
 
 
 const formatCurrency = (amount: number) => {
@@ -51,32 +55,59 @@ const formatCurrency = (amount: number) => {
 };
 
 export default function DashboardPage() {
-    const firestore = useFirestore();
-    const { user } = useFirebase();
+    const { firestore, user } = useFirebase();
+    const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
-    const transactionsQuery = useMemoFirebase(() => {
+    const transactionsQuery = useMemo(() => {
         if (!firestore || !user?.uid) return null;
         return collection(firestore, 'users', user.uid, 'transactions');
     }, [firestore, user?.uid]);
     
-    const { data: transactions, isLoading } = useCollection<Transaction>(transactionsQuery);
+    const { data: allTransactions, isLoading } = useCollection<Transaction>(transactionsQuery);
+
+    const filteredTransactions = useMemo(() => {
+        if (!allTransactions) return [];
+        if (!dateRange?.from) return allTransactions;
+
+        const from = startOfDay(dateRange.from);
+        const to = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
+
+        return allTransactions.filter(t => {
+            const issueDate = new Date(t.issueDate);
+            return issueDate >= from && issueDate <= to;
+        })
+    }, [allTransactions, dateRange]);
+
 
     const stats = useMemo(() => {
-        const active = transactions?.filter(t => t.status === 'active' || t.status === 'overdue') || [];
-        const completed = transactions?.filter(t => t.status === 'completed') || [];
+        const transactionsToProcess = filteredTransactions || [];
+        const active = transactionsToProcess.filter(t => t.status === 'active' || t.status === 'overdue');
+        const completed = transactionsToProcess.filter(t => t.status === 'completed');
         
-        const expectedProfit = active.reduce((sum, t) => sum + t.profit, 0);
-        const totalDue = active.reduce((sum, t) => sum + t.remainingAmount, 0);
-        const overdueCount = active.filter(t => t.status === 'overdue').length;
+        // When filtering, profit should be from completed transactions in the range.
+        // When not filtering, it's the expected profit from all active transactions.
+        const profit = dateRange?.from
+            ? completed.reduce((sum, t) => sum + t.profit, 0)
+            : (allTransactions || []).filter(t => t.status === 'active' || t.status === 'overdue').reduce((sum, t) => sum + t.profit, 0);
 
-        return { expectedProfit, totalDue, overdueCount, activeCount: active.length, completedCount: completed.length };
-    }, [transactions]);
+        const totalDue = (allTransactions || []).filter(t => t.status === 'active' || t.status === 'overdue').reduce((sum, t) => sum + t.remainingAmount, 0);
+        
+        const overdueCount = active.length > 0 ? active.filter(t => t.status === 'overdue').length : 0;
+
+        return { 
+            profit, 
+            totalDue, 
+            overdueCount, 
+            activeCount: active.length, 
+            completedCount: completed.length 
+        };
+    }, [filteredTransactions, allTransactions, dateRange]);
 
     const attentionTransactions = useMemo(() => {
         const today = new Date();
         const oneWeekFromNow = addDays(today, 7);
 
-        return (transactions || [])
+        return (allTransactions || [])
             .filter(t => {
                 if (t.status === 'completed' || t.status === 'archived') return false;
                 const dueDate = new Date(t.dueDate);
@@ -86,7 +117,7 @@ export default function DashboardPage() {
             })
             .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
             .slice(0, 5);
-    }, [transactions]);
+    }, [allTransactions]);
 
 
     const chartData = [
@@ -100,6 +131,8 @@ export default function DashboardPage() {
         'الديون المسددة': { label: 'الديون المسددة', color: 'hsl(var(--chart-2))' },
     } satisfies ChartConfig;
 
+    const hasFilters = dateRange !== undefined;
+
 
   return (
     <div className="space-y-6">
@@ -109,64 +142,92 @@ export default function DashboardPage() {
             متابعة دقيقة ومريحة لأرباحك وديونك الحالية.
           </p>
         </div>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        
         <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">إجمالي الأرباح المتوقعة</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>نظرة عامة على الإحصائيات</CardTitle>
+                <div className="flex items-center gap-2">
+                    <DateRangePicker date={dateRange} setDate={setDateRange} />
+                    {hasFilters && (
+                        <Button variant="ghost" size="sm" onClick={() => setDateRange(undefined)}>
+                            <X className="me-2"/>
+                            مسح الفلتر
+                        </Button>
+                    )}
+                </div>
             </CardHeader>
-            <CardContent>
-                <div className="text-2xl font-bold">{isLoading ? <Loader2 className="size-6 animate-spin"/> : formatCurrency(stats.expectedProfit)}</div>
-                <p className="text-xs text-muted-foreground">
-                من كل المعاملات الآجلة المفتوحة حاليًا.
-                </p>
+             <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">
+                            {dateRange?.from ? 'أرباح الفترة' : 'إجمالي الأرباح المتوقعة'}
+                        </CardTitle>
+                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{isLoading ? <Loader2 className="size-6 animate-spin"/> : formatCurrency(stats.profit)}</div>
+                        <p className="text-xs text-muted-foreground">
+                            {dateRange?.from ? 'الأرباح من المعاملات المكتملة في الفترة' : 'من كل المعاملات الآجلة المفتوحة حاليًا'}
+                        </p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">الرصيد الكلي المستحق</CardTitle>
+                        <CreditCard className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{isLoading ? <Loader2 className="size-6 animate-spin"/> : formatCurrency(stats.totalDue)}</div>
+                        <p className="text-xs text-muted-foreground">
+                        إجمالي ديون الزبائن (لا يتأثر بالفلتر).
+                        </p>
+                    </CardContent>
+                </Card>
+                 <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">المعاملات النشطة</CardTitle>
+                    <Activity className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{isLoading ? <Loader2 className="size-6 animate-spin"/> : `+${stats.activeCount}`}</div>
+                    <p className="text-xs text-muted-foreground">
+                      {dateRange?.from ? 'في الفترة المحددة' : 'التي لم تكتمل بعد'}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">المعاملات المتأخرة</CardTitle>
+                        <AlertCircle className="h-4 w-4 text-red-500" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{isLoading ? <Loader2 className="size-6 animate-spin"/> : `+${stats.overdueCount}`}</div>
+                        <p className="text-xs text-muted-foreground">
+                        {dateRange?.from ? 'في الفترة المحددة' : 'تجاوزت تاريخ الاستحقاق'}
+                        </p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">المعاملات المكتملة</CardTitle>
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{isLoading ? <Loader2 className="size-6 animate-spin"/> : `+${stats.completedCount}`}</div>
+                        <p className="text-xs text-muted-foreground">
+                        {dateRange?.from ? 'في الفترة المحددة' : 'التي تم سدادها بالكامل'}
+                        </p>
+                    </CardContent>
+                </Card>
             </CardContent>
         </Card>
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">الرصيد الكلي المستحق</CardTitle>
-                <CreditCard className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-                <div className="text-2xl font-bold">{isLoading ? <Loader2 className="size-6 animate-spin"/> : formatCurrency(stats.totalDue)}</div>
-                <p className="text-xs text-muted-foreground">
-                إجمالي المبلغ الذي يدين به الزبائن.
-                </p>
-            </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">المعاملات النشطة</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{isLoading ? <Loader2 className="size-6 animate-spin"/> : `+${stats.activeCount}`}</div>
-            <p className="text-xs text-muted-foreground">
-              المعاملات التي لم تكتمل بعد.
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">المعاملات المتأخرة</CardTitle>
-                <AlertCircle className="h-4 w-4 text-red-500" />
-            </CardHeader>
-            <CardContent>
-                <div className="text-2xl font-bold">{isLoading ? <Loader2 className="size-6 animate-spin"/> : `+${stats.overdueCount}`}</div>
-                <p className="text-xs text-muted-foreground">
-                المعاملات التي تجاوزت تاريخ الاستحقاق.
-                </p>
-            </CardContent>
-        </Card>
-      </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
         <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle>تنبيهات الاستحقاق القادمة</CardTitle>
             <CardDescription>
-              أهم المعاملات التي تستحق السداد خلال الـ 7 أيام القادمة.
+              أهم المعاملات التي تستحق السداد خلال الـ 7 أيام القادمة (لا تتأثر بالفلتر).
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -203,7 +264,7 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle>نظرة عامة على الديون</CardTitle>
             <CardDescription>
-              نسبة المعاملات المسددة مقابل المستحقة.
+              {dateRange?.from ? 'نسبة المعاملات في الفترة المحددة' : 'إجمالي نسبة المعاملات'}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -227,5 +288,6 @@ export default function DashboardPage() {
       </div>
     </div>
   );
+}
 
     
