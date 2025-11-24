@@ -429,7 +429,7 @@ export function AddTransactionDialog() {
 }
 
 const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('ar-MR', {
+    return new Intl.NumberFormat('fr-MR', {
       style: 'currency',
       currency: 'MRU',
       minimumFractionDigits: 0,

@@ -49,7 +49,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 
 const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('ar-MR', {
+    return new Intl.NumberFormat('fr-MR', {
       style: 'currency',
       currency: 'MRU',
       minimumFractionDigits: 0,

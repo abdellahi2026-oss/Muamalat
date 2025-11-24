@@ -25,7 +25,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('ar-MR', {
+    return new Intl.NumberFormat('fr-MR', {
       style: 'currency',
       currency: 'MRU',
       minimumFractionDigits: 0,
