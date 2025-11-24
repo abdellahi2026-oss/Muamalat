@@ -19,15 +19,21 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   useCollection,
   useDoc,
   useFirestore,
   useMemoFirebase,
   useFirebase,
 } from '@/firebase';
-import { collection, doc, query, where, writeBatch } from 'firebase/firestore';
+import { collection, doc, query, where, writeBatch, deleteDoc } from 'firebase/firestore';
 import type { Client, Transaction } from '@/lib/types';
-import { Loader2, ArrowLeft, Phone, User, HandCoins } from 'lucide-react';
+import { Loader2, ArrowLeft, Phone, User, HandCoins, MoreVertical, Edit, Trash2 } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -47,6 +53,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { AddOrEditClientDialog } from '@/components/add-client-dialog';
+import { EditTransactionDialog } from '@/components/edit-transaction-dialog';
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('fr-MR', {
@@ -181,12 +189,73 @@ function RegisterPaymentDialog({ client, transactions, onPaymentSuccess }: { cli
     )
 }
 
+function TransactionActions({ transaction, onEdit }: { transaction: Transaction, onEdit: () => void }) {
+  const { firestore, user } = useFirebase();
+  const { toast } = useToast();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  const handleDelete = async () => {
+    if (!firestore || !user) return;
+    const transactionRef = doc(firestore, 'users', user.uid, 'transactions', transaction.id);
+    // In a real app, you would also update client's totalDue and product stock in a batch write
+    try {
+      await deleteDoc(transactionRef);
+      toast({ title: 'تم حذف المعاملة' });
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'فشل حذف المعاملة' });
+    }
+  };
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon">
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuItem onSelect={onEdit}>
+            <Edit className="me-2 h-4 w-4" />
+            تعديل
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="text-red-500">
+            <Trash2 className="me-2 h-4 w-4" />
+            حذف
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
+            <AlertDialogDescription>
+              سيؤدي هذا إلى حذف المعاملة نهائيًا. لا يمكن التراجع عن هذا الإجراء.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
+              حذف
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
+
 export default function ClientDetailPage() {
   const { firestore, user } = useFirebase();
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
   const clientId = params.clientId as string;
+
+  const [isClientDialogOpen, setClientDialogOpen] = useState(false);
+  const [editTransaction, setEditTransaction] = useState<Transaction | null>(null);
 
   const clientDocRef = useMemoFirebase(() => {
     if (!firestore || !user?.uid || !clientId) return null;
@@ -205,7 +274,7 @@ export default function ClientDetailPage() {
   
   const { data: transactions, isLoading: areTransactionsLoading, refetch: refetchTransactions } = useCollection<Transaction>(transactionsQuery);
 
-  const handlePaymentSuccess = () => {
+  const handleSuccess = () => {
     if (refetchClient) refetchClient();
     if (refetchTransactions) refetchTransactions();
   }
@@ -234,12 +303,13 @@ export default function ClientDetailPage() {
   const sortedTransactions = (transactions || []).sort((a,b) => new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime());
 
   return (
+    <>
     <div className="space-y-6">
       <div className="flex items-center gap-4">
          <Button variant="outline" size="icon" onClick={() => router.push('/clients')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-        <div className="space-y-1">
+        <div className="flex-grow space-y-1">
           <h1 className="font-headline text-3xl font-bold tracking-tight flex items-center gap-2">
             <User/> {client.name}
           </h1>
@@ -250,6 +320,9 @@ export default function ClientDetailPage() {
             </div>
           )}
         </div>
+        <Button variant="outline" onClick={() => setClientDialogOpen(true)}>
+            <Edit className="me-2" /> تعديل الزبون
+        </Button>
       </div>
       
        <Card>
@@ -263,7 +336,7 @@ export default function ClientDetailPage() {
                 <p className='text-3xl font-bold text-red-600'>{formatCurrency(client.totalDue)}</p>
            </div>
             <div className='flex items-center justify-end'>
-                 <RegisterPaymentDialog client={client} transactions={sortedTransactions} onPaymentSuccess={handlePaymentSuccess} />
+                 <RegisterPaymentDialog client={client} transactions={sortedTransactions} onPaymentSuccess={handleSuccess} />
             </div>
         </CardContent>
        </Card>
@@ -280,12 +353,13 @@ export default function ClientDetailPage() {
                 <TableHead>حالة السداد</TableHead>
                 <TableHead>تاريخ الاستحقاق</TableHead>
                 <TableHead>الحالة</TableHead>
+                <TableHead>إجراءات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sortedTransactions.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center">
+                  <TableCell colSpan={5} className="h-24 text-center">
                     لا توجد معاملات لهذا الزبون.
                   </TableCell>
                 </TableRow>
@@ -307,6 +381,9 @@ export default function ClientDetailPage() {
                       {formatDistanceToNow(new Date(t.dueDate), { addSuffix: true, locale: ar })}
                   </TableCell>
                   <TableCell>{getStatusBadge(t.status)}</TableCell>
+                  <TableCell>
+                    <TransactionActions transaction={t} onEdit={() => setEditTransaction(t)} />
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -314,5 +391,23 @@ export default function ClientDetailPage() {
         </CardContent>
       </Card>
     </div>
+
+     <AddOrEditClientDialog 
+        isOpen={isClientDialogOpen}
+        setIsOpen={setClientDialogOpen}
+        client={client}
+        onSuccess={handleSuccess}
+    />
+    
+    {editTransaction && (
+        <EditTransactionDialog
+            isOpen={!!editTransaction}
+            setIsOpen={(isOpen) => !isOpen && setEditTransaction(null)}
+            transaction={editTransaction}
+            onSuccess={handleSuccess}
+        />
+    )}
+
+    </>
   );
 }

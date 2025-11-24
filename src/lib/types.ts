@@ -14,7 +14,7 @@ export type User = {
 export type Client = {
     id: string;
     name: string;
-    phone?: string;
+    phone: string;
     totalDue: number; // Aggregated amount from all their active contracts
     createdAt: string;
     ownerId: string;

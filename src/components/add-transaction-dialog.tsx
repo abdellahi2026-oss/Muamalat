@@ -49,6 +49,14 @@ const stepOneSchema = z.object({
 }, {
     message: 'يجب إدخال اسم العميل الجديد (حرفين على الأقل).',
     path: ['newClientName'],
+}).refine(data => {
+    if (data.clientId === 'new-client') {
+        return !!data.newClientPhone && data.newClientPhone.length > 0;
+    }
+    return true;
+}, {
+    message: 'رقم هاتف العميل الجديد إجباري.',
+    path: ['newClientPhone'],
 });
 
 const stepTwoSchema = z.object({
@@ -155,7 +163,7 @@ export function AddTransactionDialog() {
       const newClient: Client = {
         id: finalClientId,
         name: finalClientName,
-        phone: newClientPhone || '',
+        phone: newClientPhone!,
         totalDue: totalAmount,
         createdAt: new Date().toISOString(),
         ownerId: user.uid,
@@ -289,7 +297,7 @@ export function AddTransactionDialog() {
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>هاتف الزبون</FormLabel>
-                                    <FormControl><Input placeholder="(اختياري)" {...field} /></FormControl>
+                                    <FormControl><Input placeholder="رقم الهاتف" {...field} dir="ltr"/></FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}

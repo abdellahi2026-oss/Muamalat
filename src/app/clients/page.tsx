@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -22,7 +23,7 @@ import type { Client } from '@/lib/types';
 import { Loader2, User, PlusCircle } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { AddClientDialog } from '@/components/add-client-dialog';
+import { AddOrEditClientDialog } from '@/components/add-client-dialog';
 import { Button } from '@/components/ui/button';
 
 const formatCurrency = (amount: number) => {
@@ -40,7 +41,7 @@ export default function ClientsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const searchQuery = searchParams.get('q');
-  const [isAddClientDialogOpen, setAddClientDialogOpen] = useState(false);
+  const [isClientDialogOpen, setClientDialogOpen] = useState(false);
 
   const clientsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
@@ -79,7 +80,7 @@ export default function ClientsPage() {
             مراجعة سريعة للمعاملات المفتوحة وإجمالي المستحقات لكل زبون.
             </p>
         </div>
-        <Button onClick={() => setAddClientDialogOpen(true)}>
+        <Button onClick={() => setClientDialogOpen(true)}>
             <PlusCircle className="me-2" />
             إضافة زبون
         </Button>
@@ -142,10 +143,10 @@ export default function ClientsPage() {
         </CardContent>
       </Card>
     </div>
-     <AddClientDialog 
-        isOpen={isAddClientDialogOpen}
-        setIsOpen={setAddClientDialogOpen}
-        onClientAdded={() => refetch && refetch()}
+     <AddOrEditClientDialog 
+        isOpen={isClientDialogOpen}
+        setIsOpen={setClientDialogOpen}
+        onSuccess={() => refetch && refetch()}
     />
     </>
   );

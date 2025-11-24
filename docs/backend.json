@@ -29,7 +29,7 @@
         "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the client was created." },
         "ownerId": { "type": "string", "description": "The UID of the merchant who owns this client record." }
       },
-      "required": ["id", "name", "totalDue", "createdAt", "ownerId"]
+      "required": ["id", "name", "phone", "totalDue", "createdAt", "ownerId"]
     },
     "Product": {
         "$schema": "http://json-schema.org/draft-07/schema#",
