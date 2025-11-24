@@ -21,9 +21,9 @@ import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  ChartConfig,
+  type ChartConfig,
 } from '@/components/ui/chart';
-import { PieChart, Pie, Tooltip } from 'recharts';
+import { PieChart, Pie } from 'recharts';
 import { Badge } from '@/components/ui/badge';
 import {
   AlertCircle,
@@ -83,13 +83,15 @@ export default function DashboardPage() {
     const stats = useMemo(() => {
         const transactionsToProcess = filteredTransactions || [];
         const active = transactionsToProcess.filter(t => t.status === 'active' || t.status === 'overdue');
-        const completed = transactionsToProcess.filter(t => t.status === 'completed');
+        const completedInDateRange = transactionsToProcess.filter(t => t.status === 'completed');
         
-        // When filtering, profit should be from completed transactions in the range.
-        // When not filtering, it's the expected profit from all active transactions.
+        // Profit for the selected period (or expected profit if no period)
         const profit = dateRange?.from
-            ? completed.reduce((sum, t) => sum + t.profit, 0)
+            ? completedInDateRange.reduce((sum, t) => sum + t.profit, 0)
             : (allTransactions || []).filter(t => t.status === 'active' || t.status === 'overdue').reduce((sum, t) => sum + t.profit, 0);
+
+        // Total realized profit from all completed transactions, regardless of date
+        const totalRealizedProfit = (allTransactions || []).filter(t => t.status === 'completed').reduce((sum, t) => sum + t.profit, 0);
 
         const totalDue = (allTransactions || []).filter(t => t.status === 'active' || t.status === 'overdue').reduce((sum, t) => sum + t.remainingAmount, 0);
         
@@ -99,10 +101,11 @@ export default function DashboardPage() {
 
         return { 
             profit, 
+            totalRealizedProfit,
             totalDue, 
             overdueCount, 
             activeCount: activeButNotOverdueCount, 
-            completedCount: completed.length 
+            completedCount: completedInDateRange.length 
         };
     }, [filteredTransactions, allTransactions, dateRange]);
 
@@ -159,7 +162,7 @@ export default function DashboardPage() {
                     )}
                 </div>
             </CardHeader>
-             <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+             <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">
@@ -171,6 +174,18 @@ export default function DashboardPage() {
                         <div className="text-2xl font-bold">{isLoading ? <Loader2 className="size-6 animate-spin"/> : formatCurrency(stats.profit)}</div>
                         <p className="text-xs text-muted-foreground">
                             {dateRange?.from ? 'الأرباح من المعاملات المكتملة في الفترة' : 'من كل المعاملات الآجلة المفتوحة حاليًا'}
+                        </p>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">إجمالي الأرباح المحققة</CardTitle>
+                        <TrendingUp className="h-4 w-4 text-green-500" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{isLoading ? <Loader2 className="size-6 animate-spin"/> : formatCurrency(stats.totalRealizedProfit)}</div>
+                        <p className="text-xs text-muted-foreground">
+                        من جميع المعاملات المكتملة (لا يتأثر بالفلتر).
                         </p>
                     </CardContent>
                 </Card>
@@ -186,6 +201,8 @@ export default function DashboardPage() {
                         </p>
                     </CardContent>
                 </Card>
+            </CardContent>
+             <CardContent className="grid gap-4 md:grid-cols-3">
                  <Link href="/transactions?status=active" className="block hover:bg-muted/50 rounded-lg">
                     <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -298,3 +315,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
