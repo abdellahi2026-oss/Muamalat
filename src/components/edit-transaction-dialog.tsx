@@ -25,9 +25,9 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Loader2, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useFirebase } from '@/firebase';
-import { doc, updateDoc, writeBatch } from 'firebase/firestore';
-import type { Transaction, Product } from '@/lib/types';
+import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
+import { doc, updateDoc, writeBatch, getDoc } from 'firebase/firestore';
+import type { Transaction, Product, Client } from '@/lib/types';
 import { format, parseISO } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar as CalendarPicker } from './ui/calendar';
@@ -52,6 +52,19 @@ export function EditTransactionDialog({ isOpen, setIsOpen, transaction, onSucces
   const { toast } = useToast();
   const { firestore, user } = useFirebase();
 
+  const productRef = useMemoFirebase(() => {
+    if (!firestore || !user || !transaction) return null;
+    return doc(firestore, 'users', user.uid, 'products', transaction.productId);
+  }, [firestore, user, transaction]);
+
+  const clientRef = useMemoFirebase(() => {
+    if (!firestore || !user || !transaction) return null;
+    return doc(firestore, 'users', user.uid, 'clients', transaction.clientId);
+  }, [firestore, user, transaction]);
+
+  const { data: product } = useDoc<Product>(productRef);
+  const { data: client } = useDoc<Client>(clientRef);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
   });
@@ -66,31 +79,22 @@ export function EditTransactionDialog({ isOpen, setIsOpen, transaction, onSucces
   }, [transaction, form]);
 
   const onSubmit = async (data: FormValues) => {
-    if (!firestore || !user || !transaction) return;
+    if (!firestore || !user || !transaction || !product || !client) {
+        toast({ variant: 'destructive', title: 'خطأ', description: 'لا يمكن تحميل بيانات المنتج أو الزبون.' });
+        return;
+    }
     setIsSubmitting(true);
     
     const batch = writeBatch(firestore);
 
     try {
         const transactionRef = doc(firestore, 'users', user.uid, 'transactions', transaction.id);
-        const productRef = doc(firestore, 'users', user.uid, 'products', transaction.productId);
-        const clientRef = doc(firestore, 'users', user.uid, 'clients', transaction.clientId);
         
-        const productDoc = await firestore.getDoc(productRef);
-        const clientDoc = await firestore.getDoc(clientRef);
-        
-        if (!productDoc.exists() || !clientDoc.exists()) {
-            throw new Error("Product or client not found");
-        }
-
-        const product = productDoc.data() as Product;
-        const client = clientDoc.data() as any;
-
         const quantityDifference = data.quantity - transaction.quantity;
         
         // Check stock
         if (quantityDifference > product.stock) {
-            form.setError('quantity', { message: 'الكمية المطلوبة أكبر من المخزون المتاح.' });
+            form.setError('quantity', { message: 'الكمية الإضافية المطلوبة أكبر من المخزون المتاح.' });
             setIsSubmitting(false);
             return;
         }
@@ -106,16 +110,17 @@ export function EditTransactionDialog({ isOpen, setIsOpen, transaction, onSucces
             dueDate: data.dueDate.toISOString(),
             totalAmount: newTotalAmount,
             profit: newProfit,
-            remainingAmount: newRemainingAmount
+            remainingAmount: newRemainingAmount,
+            status: data.dueDate < new Date() && newRemainingAmount > 0 ? 'overdue' : 'active',
         });
 
         // 2. Update product stock
-        batch.update(productRef, {
+        batch.update(productRef!, {
             stock: product.stock - quantityDifference
         });
 
         // 3. Update client total due
-        batch.update(clientRef, {
+        batch.update(clientRef!, {
             totalDue: client.totalDue + amountDifference
         });
 
@@ -172,7 +177,7 @@ export function EditTransactionDialog({ isOpen, setIsOpen, transaction, onSucces
                                 variant={'outline'}
                                 className={cn('w-full ps-3 text-start font-normal', !field.value && 'text-muted-foreground')}
                             >
-                                {field.value ? format(field.value, 'PPP') : <span>اختر تاريخًا</span>}
+                                {field.value ? format(field.value, 'PPP', { locale: ar }) : <span>اختر تاريخًا</span>}
                                 <Calendar className="ms-auto h-4 w-4 opacity-50" />
                             </Button>
                             </FormControl>
@@ -184,6 +189,7 @@ export function EditTransactionDialog({ isOpen, setIsOpen, transaction, onSucces
                                 onSelect={field.onChange}
                                 disabled={(date) => date < new Date(transaction.issueDate)}
                                 initialFocus
+                                locale={ar}
                             />
                         </PopoverContent>
                     </Popover>

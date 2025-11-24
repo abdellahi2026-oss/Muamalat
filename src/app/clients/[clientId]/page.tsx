@@ -31,8 +31,8 @@ import {
   useMemoFirebase,
   useFirebase,
 } from '@/firebase';
-import { collection, doc, query, where, writeBatch, deleteDoc } from 'firebase/firestore';
-import type { Client, Transaction } from '@/lib/types';
+import { collection, doc, query, where, writeBatch, deleteDoc, getDoc } from 'firebase/firestore';
+import type { Client, Transaction, Product } from '@/lib/types';
 import { Loader2, ArrowLeft, Phone, User, HandCoins, MoreVertical, Edit, Trash2 } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -189,22 +189,8 @@ function RegisterPaymentDialog({ client, transactions, onPaymentSuccess }: { cli
     )
 }
 
-function TransactionActions({ transaction, onEdit }: { transaction: Transaction, onEdit: () => void }) {
-  const { firestore, user } = useFirebase();
-  const { toast } = useToast();
+function TransactionActions({ transaction, onEdit, onDelete }: { transaction: Transaction, onEdit: () => void, onDelete: () => void }) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-
-  const handleDelete = async () => {
-    if (!firestore || !user) return;
-    const transactionRef = doc(firestore, 'users', user.uid, 'transactions', transaction.id);
-    // In a real app, you would also update client's totalDue and product stock in a batch write
-    try {
-      await deleteDoc(transactionRef);
-      toast({ title: 'تم حذف المعاملة' });
-    } catch (e) {
-      toast({ variant: 'destructive', title: 'فشل حذف المعاملة' });
-    }
-  };
 
   return (
     <>
@@ -236,7 +222,7 @@ function TransactionActions({ transaction, onEdit }: { transaction: Transaction,
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
+            <AlertDialogAction onClick={onDelete} className="bg-destructive hover:bg-destructive/90">
               حذف
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -278,6 +264,40 @@ export default function ClientDetailPage() {
     if (refetchClient) refetchClient();
     if (refetchTransactions) refetchTransactions();
   }
+
+  const handleDeleteTransaction = async (transaction: Transaction) => {
+    if (!firestore || !user) return;
+    
+    const batch = writeBatch(firestore);
+    
+    const transactionRef = doc(firestore, 'users', user.uid, 'transactions', transaction.id);
+    const productRef = doc(firestore, 'users', user.uid, 'products', transaction.productId);
+    const clientRef = doc(firestore, 'users', user.uid, 'clients', transaction.clientId);
+    
+    try {
+        const productDoc = await getDoc(productRef);
+        const clientDoc = await getDoc(clientRef);
+
+        if (productDoc.exists()) {
+            const productData = productDoc.data() as Product;
+            batch.update(productRef, { stock: productData.stock + transaction.quantity });
+        }
+
+        if (clientDoc.exists()) {
+            const clientData = clientDoc.data() as Client;
+            batch.update(clientRef, { totalDue: clientData.totalDue - transaction.remainingAmount });
+        }
+
+        batch.delete(transactionRef);
+        
+        await batch.commit();
+        toast({ title: 'تم حذف المعاملة بنجاح' });
+        handleSuccess();
+    } catch (e) {
+      console.error(e);
+      toast({ variant: 'destructive', title: 'فشل حذف المعاملة' });
+    }
+  };
 
   const isLoading = isClientLoading || areTransactionsLoading;
   
@@ -382,7 +402,11 @@ export default function ClientDetailPage() {
                   </TableCell>
                   <TableCell>{getStatusBadge(t.status)}</TableCell>
                   <TableCell>
-                    <TransactionActions transaction={t} onEdit={() => setEditTransaction(t)} />
+                    <TransactionActions 
+                        transaction={t} 
+                        onEdit={() => setEditTransaction(t)}
+                        onDelete={() => handleDeleteTransaction(t)}
+                    />
                   </TableCell>
                 </TableRow>
               ))}

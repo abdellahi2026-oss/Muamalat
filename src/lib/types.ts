@@ -55,6 +55,3 @@ export type Transaction = {
 
   ownerId: string;
 };
-
-// This will be the only contract type for now to follow the new specs.
-export type AnyContract = Transaction;

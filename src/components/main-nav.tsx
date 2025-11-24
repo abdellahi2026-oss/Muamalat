@@ -8,6 +8,7 @@ import {
   Users as CustomersIcon,
   Home,
   Package,
+  FileText,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUser, useDoc, useMemoFirebase } from '@/firebase';
@@ -36,6 +37,7 @@ export function MainNav() {
     { href: '/', label: 'لوحة التحكم', icon: Home, isActive: pathname === '/' },
     { href: '/clients', label: 'الزبائن', icon: CustomersIcon, isActive: pathname.startsWith('/clients') },
     { href: '/products', label: 'المنتجات', icon: Package, isActive: pathname.startsWith('/products') },
+    { href: '/transactions', label: 'المعاملات', icon: FileText, isActive: pathname.startsWith('/transactions') },
     ...(isAdmin ? [{ href: '/users', label: 'المستخدمين', icon: 'Users' as any, isActive: pathname.startsWith('/users') }] : [])
   ];
 
