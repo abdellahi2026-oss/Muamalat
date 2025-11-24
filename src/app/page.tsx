@@ -23,7 +23,7 @@ import {
   ChartTooltipContent,
   ChartConfig,
 } from '@/components/ui/chart';
-import { PieChart, Pie } from 'recharts';
+import { PieChart, Pie, Tooltip } from 'recharts';
 import { Badge } from '@/components/ui/badge';
 import {
   AlertCircle,
@@ -284,7 +284,7 @@ export default function DashboardPage() {
               ) : (
             <ChartContainer config={chartConfig} className="mx-auto aspect-square h-full max-h-[250px]">
                 <PieChart>
-                    <Tooltip
+                    <ChartTooltip
                         cursor={false}
                         content={<ChartTooltipContent hideLabel indicator='dot' nameKey="name" />}
                     />
