@@ -30,6 +30,7 @@ import {
   Clock,
   TrendingUp,
   CreditCard,
+  Activity,
 } from 'lucide-react';
 import type { Transaction } from '@/lib/types';
 import { format, addDays } from 'date-fns';
@@ -109,7 +110,7 @@ export default function DashboardPage() {
           </p>
         </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">إجمالي الأرباح المتوقعة</CardTitle>
@@ -133,6 +134,18 @@ export default function DashboardPage() {
                 إجمالي المبلغ الذي يدين به الزبائن.
                 </p>
             </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">المعاملات النشطة</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{isLoading ? <Loader2 className="size-6 animate-spin"/> : `+${stats.activeCount}`}</div>
+            <p className="text-xs text-muted-foreground">
+              المعاملات التي لم تكتمل بعد.
+            </p>
+          </CardContent>
         </Card>
         <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -214,4 +227,5 @@ export default function DashboardPage() {
       </div>
     </div>
   );
-}
+
+    
