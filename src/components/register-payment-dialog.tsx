@@ -70,7 +70,8 @@ export function RegisterPaymentDialog({ isOpen, setIsOpen, onSuccess }: Register
   const clientsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return collection(firestore, 'users', user.uid, 'clients');
-  }, [firestore, user?.uid]);
+  }, [firestore, user?.uid, isOpen]); // Rerun when dialog opens
+  
   const { data: clients, refetch: refetchClients } = useCollection<Client>(clientsQuery);
 
   const transactionsQuery = useMemoFirebase(() => {
@@ -84,8 +85,8 @@ export function RegisterPaymentDialog({ isOpen, setIsOpen, onSuccess }: Register
   const { data: transactions, isLoading: transactionsLoading } = useCollection<Transaction>(transactionsQuery);
 
    useEffect(() => {
-      if (isOpen) {
-        if(refetchClients) refetchClients();
+      if (isOpen && refetchClients) {
+        refetchClients();
       }
   }, [isOpen, refetchClients]);
   
