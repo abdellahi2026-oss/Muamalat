@@ -31,7 +31,7 @@ import {
   useMemoFirebase,
   useFirebase,
 } from '@/firebase';
-import { collection, doc, query, where, writeBatch, deleteDoc, getDoc } from 'firebase/firestore';
+import { collection, doc, query, where, writeBatch, getDoc } from 'firebase/firestore';
 import type { Client, Transaction, Product } from '@/lib/types';
 import { Loader2, ArrowLeft, Phone, User, HandCoins, MoreVertical, Edit, Trash2 } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';

@@ -205,7 +205,7 @@ export default function LoginPage() {
                       </button>
                     </div>
                     <FormControl>
-                      <Input type="password" {...field} dir="ltr" className="text-left" />
+                      <Input type="password" {...field} dir="ltr" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
