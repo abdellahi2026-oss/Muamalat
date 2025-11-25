@@ -96,7 +96,8 @@ function RegisterPaymentDialog({ client, transactions, onPaymentSuccess }: { cli
             return;
         }
 
-        if (amount > client.totalDue + 0.001) { // Add epsilon for float precision
+        // Use a small epsilon for floating point comparisons
+        if (amount > client.totalDue + 0.01) {
             toast({ variant: 'destructive', title: 'المبلغ المدفوع أكبر من إجمالي المستحقات.'});
             return;
         }
@@ -121,9 +122,9 @@ function RegisterPaymentDialog({ client, transactions, onPaymentSuccess }: { cli
             const paymentForThisTransaction = Math.min(remainingPayment, trans.remainingAmount);
             
             const transactionRef = doc(firestore, 'users', user.uid, 'transactions', trans.id);
-            const newPaidAmount = trans.paidAmount + paymentForThisTransaction;
-            const newRemainingAmount = trans.remainingAmount - paymentForThisTransaction;
-            const newStatus = newRemainingAmount <= 0.001 ? 'completed' : trans.status;
+            const newPaidAmount = Math.round((trans.paidAmount + paymentForThisTransaction) * 100) / 100;
+            const newRemainingAmount = Math.round((trans.remainingAmount - paymentForThisTransaction) * 100) / 100;
+            const newStatus = newRemainingAmount <= 0.01 ? 'completed' : trans.status;
 
             batch.update(transactionRef, {
                 paidAmount: newPaidAmount,
@@ -136,7 +137,7 @@ function RegisterPaymentDialog({ client, transactions, onPaymentSuccess }: { cli
 
         // Update client's totalDue
         const clientRef = doc(firestore, 'users', user.uid, 'clients', client.id);
-        const newTotalDue = client.totalDue - amount;
+        const newTotalDue = Math.round((client.totalDue - amount) * 100) / 100;
         batch.update(clientRef, { totalDue: newTotalDue });
 
         try {
@@ -557,5 +558,7 @@ export default function ClientDetailPage() {
   );
 }
 
+
+    
 
     

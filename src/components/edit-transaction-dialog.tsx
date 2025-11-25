@@ -169,7 +169,9 @@ export function EditTransactionDialog({ isOpen, setIsOpen, transaction, onSucces
         const newTotalAmount = data.quantity * data.sellingPrice;
         const newProfit = (data.sellingPrice - data.purchasePrice) * data.quantity;
         const amountDifference = newTotalAmount - transaction.totalAmount;
-        const newRemainingAmount = transaction.remainingAmount + amountDifference;
+        
+        // Recalculate remaining amount based on paid amount and new total
+        const newRemainingAmount = Math.round((newTotalAmount - transaction.paidAmount) * 100) / 100;
 
         batch.update(transactionRef, {
             productId: data.productId,
@@ -186,8 +188,9 @@ export function EditTransactionDialog({ isOpen, setIsOpen, transaction, onSucces
         });
 
         // 3. Update client total due
+        const clientTotalDueDifference = newRemainingAmount - transaction.remainingAmount;
         batch.update(clientRef, {
-            totalDue: clientData.totalDue + amountDifference
+            totalDue: clientData.totalDue + clientTotalDueDifference
         });
 
         await batch.commit();
@@ -340,3 +343,5 @@ export function EditTransactionDialog({ isOpen, setIsOpen, transaction, onSucces
     </Dialog>
   );
 }
+
+    

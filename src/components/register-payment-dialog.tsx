@@ -130,7 +130,7 @@ export function RegisterPaymentDialog({ isOpen, setIsOpen, onSuccess }: Register
     }
     
     // Use a small epsilon to handle floating point inaccuracies
-    if (data.amount > selectedTransaction.remainingAmount + 0.001) {
+    if (data.amount > selectedTransaction.remainingAmount + 0.01) {
         form.setError('amount', { message: 'المبلغ المدفوع أكبر من المبلغ المتبقي للمعاملة.'});
         return;
     }
@@ -139,9 +139,9 @@ export function RegisterPaymentDialog({ isOpen, setIsOpen, onSuccess }: Register
 
     // 1. Update Transaction
     const transactionRef = doc(firestore, 'users', user.uid, 'transactions', data.transactionId);
-    const newPaidAmount = selectedTransaction.paidAmount + data.amount;
-    const newRemainingAmount = selectedTransaction.remainingAmount - data.amount;
-    const newStatus = newRemainingAmount <= 0.001 ? 'completed' : selectedTransaction.status;
+    const newPaidAmount = Math.round((selectedTransaction.paidAmount + data.amount) * 100) / 100;
+    const newRemainingAmount = Math.round((selectedTransaction.remainingAmount - data.amount) * 100) / 100;
+    const newStatus = newRemainingAmount <= 0.01 ? 'completed' : selectedTransaction.status;
     
     batch.update(transactionRef, {
         paidAmount: newPaidAmount,
@@ -153,7 +153,7 @@ export function RegisterPaymentDialog({ isOpen, setIsOpen, onSuccess }: Register
     const clientRef = doc(firestore, 'users', user.uid, 'clients', data.clientId);
     const client = clients?.find(c => c.id === data.clientId);
     if (client) {
-        const newTotalDue = client.totalDue - data.amount;
+        const newTotalDue = Math.round((client.totalDue - data.amount) * 100) / 100;
         batch.update(clientRef, { totalDue: newTotalDue });
     }
 
@@ -279,3 +279,5 @@ export function RegisterPaymentDialog({ isOpen, setIsOpen, onSuccess }: Register
     </Dialog>
   );
 }
+
+    
