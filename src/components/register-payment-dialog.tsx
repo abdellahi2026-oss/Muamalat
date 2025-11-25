@@ -85,10 +85,10 @@ export function RegisterPaymentDialog({ isOpen, setIsOpen, onSuccess }: Register
   const { data: transactions, isLoading: transactionsLoading } = useCollection<Transaction>(transactionsQuery);
 
    useEffect(() => {
-      if (isOpen && refetchClients) {
+      if (isOpen && refetchClients && user) {
         refetchClients();
       }
-  }, [isOpen, refetchClients]);
+  }, [isOpen, refetchClients, user]);
   
   useEffect(() => {
     // Reset transaction when client changes
@@ -129,7 +129,8 @@ export function RegisterPaymentDialog({ isOpen, setIsOpen, onSuccess }: Register
       return;
     }
     
-    if (data.amount > selectedTransaction.remainingAmount) {
+    // Use a small epsilon to handle floating point inaccuracies
+    if (data.amount > selectedTransaction.remainingAmount + 0.001) {
         form.setError('amount', { message: 'المبلغ المدفوع أكبر من المبلغ المتبقي للمعاملة.'});
         return;
     }
@@ -140,7 +141,7 @@ export function RegisterPaymentDialog({ isOpen, setIsOpen, onSuccess }: Register
     const transactionRef = doc(firestore, 'users', user.uid, 'transactions', data.transactionId);
     const newPaidAmount = selectedTransaction.paidAmount + data.amount;
     const newRemainingAmount = selectedTransaction.remainingAmount - data.amount;
-    const newStatus = newRemainingAmount <= 0 ? 'completed' : selectedTransaction.status;
+    const newStatus = newRemainingAmount <= 0.001 ? 'completed' : selectedTransaction.status;
     
     batch.update(transactionRef, {
         paidAmount: newPaidAmount,
