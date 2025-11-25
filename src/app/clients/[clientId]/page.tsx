@@ -311,6 +311,17 @@ export default function ClientDetailPage() {
   
   const { data: transactions, isLoading: areTransactionsLoading, refetch: refetchTransactions } = useCollection<Transaction>(transactionsQuery);
 
+  const referredClientsQuery = useMemoFirebase(() => {
+    if (!firestore || !user?.uid || !clientId) return null;
+    return query(
+        collection(firestore, 'users', user.uid, 'clients'),
+        where('referredBy', '==', clientId)
+    );
+  }, [firestore, user?.uid, clientId]);
+
+  const { data: referredClients, isLoading: areReferredClientsLoading } = useCollection<Client>(referredClientsQuery);
+
+
   const handleSuccess = () => {
     if (refetchClient) refetchClient();
     if (refetchTransactions) refetchTransactions();
@@ -364,7 +375,7 @@ export default function ClientDetailPage() {
     }
   };
 
-  const isLoading = isClientLoading || areTransactionsLoading || isReferrerLoading;
+  const isLoading = isClientLoading || areTransactionsLoading || isReferrerLoading || areReferredClientsLoading;
   
   if (isLoading) {
     return (
@@ -489,6 +500,41 @@ export default function ClientDetailPage() {
           </Table>
         </CardContent>
       </Card>
+
+        {referredClients && referredClients.length > 0 && (
+            <Card>
+                <CardHeader>
+                    <CardTitle>الزبائن المحالون من طرف {client.name}</CardTitle>
+                    <CardDescription>قائمة بالزبائن الذين انضموا عن طريق هذا الزبون.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>اسم الزبون</TableHead>
+                                <TableHead>الهاتف</TableHead>
+                                <TableHead className="text-left">إجمالي المستحقات</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {referredClients.map(rc => (
+                                <TableRow key={rc.id} onClick={() => router.push(`/clients/${rc.id}`)} className="cursor-pointer">
+                                    <TableCell className="font-medium flex items-center gap-2">
+                                        <User className="size-4 text-muted-foreground"/>
+                                        {rc.name}
+                                    </TableCell>
+                                     <TableCell className='text-muted-foreground' dir="ltr">{rc.phone || 'غير متوفر'}</TableCell>
+                                    <TableCell className="text-left font-semibold text-red-600">
+                                        {formatCurrency(rc.totalDue)}
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+        )}
+
     </div>
 
      <AddOrEditClientDialog 
@@ -510,3 +556,6 @@ export default function ClientDetailPage() {
     </>
   );
 }
+
+
+    
