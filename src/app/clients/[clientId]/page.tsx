@@ -94,7 +94,7 @@ function RegisterPaymentDialog({ client, transactions, onPaymentSuccess }: { cli
             return;
         }
 
-        if (amount > client.totalDue) {
+        if (amount > client.totalDue + 0.001) { // Add epsilon for float precision
             toast({ variant: 'destructive', title: 'المبلغ المدفوع أكبر من إجمالي المستحقات.'});
             return;
         }
@@ -493,3 +493,5 @@ export default function ClientDetailPage() {
     </>
   );
 }
+
+    
