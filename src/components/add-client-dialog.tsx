@@ -89,13 +89,8 @@ export function AddOrEditClientDialog({ isOpen, setIsOpen, client, onSuccess }: 
         const clientData: Partial<Client> = {
             name: data.name,
             phone: data.phone,
+            referredBy: data.referredBy || '',
         };
-        if (data.referredBy) {
-            clientData.referredBy = data.referredBy;
-        } else {
-            clientData.referredBy = ''; // Ensure field is removed if empty
-        }
-
 
         if (isEditMode) {
             const clientRef = doc(firestore, 'users', user.uid, 'clients', client.id);
@@ -110,7 +105,7 @@ export function AddOrEditClientDialog({ isOpen, setIsOpen, client, onSuccess }: 
                 totalDue: 0,
                 createdAt: new Date().toISOString(),
                 ownerId: user.uid,
-                ...(data.referredBy && { referredBy: data.referredBy }),
+                referredBy: data.referredBy || '',
             };
             await setDoc(newClientRef, newClient);
             toast({ title: "تمت إضافة الزبون بنجاح!" });

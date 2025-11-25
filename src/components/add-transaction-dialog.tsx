@@ -179,10 +179,8 @@ export function AddTransactionDialog({ isOpen, setIsOpen, onSuccess }: AddTransa
         totalDue: totalAmount,
         createdAt: new Date().toISOString(),
         ownerId: user.uid,
+        referredBy: referredBy || '',
       };
-      if (referredBy) {
-        newClient.referredBy = referredBy;
-      }
       batch.set(newClientRef, newClient);
     }
 
@@ -319,7 +317,7 @@ export function AddTransactionDialog({ isOpen, setIsOpen, onSuccess }: AddTransa
                                 <FormLabel>الزبون المُحيل (اختياري)</FormLabel>
                                 <Combobox
                                     options={referrerOptions}
-                                    value={field.value}
+                                    value={field.value || ''}
                                     onChange={field.onChange}
                                     placeholder="ابحث عن زبون حالي..."
                                     notFoundText="لم يتم العثور على زبون."
