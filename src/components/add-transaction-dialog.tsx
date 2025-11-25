@@ -29,7 +29,7 @@ import { collection, doc, writeBatch } from 'firebase/firestore';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { Combobox } from './ui/combobox';
 import type { Client, Product, Transaction } from '@/lib/types';
-import { addDays, format } from 'date-fns';
+import { addDays, format, differenceInDays } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar as CalendarPicker } from './ui/calendar';
 import { cn } from '@/lib/utils';
@@ -86,12 +86,12 @@ export function AddTransactionDialog({ isOpen, setIsOpen, onSuccess }: AddTransa
 
   const stepTwoForm = useForm<StepTwoValues>({
     resolver: zodResolver(stepTwoSchema),
-    defaultValues: { quantity: 1, paymentDuration: '7' },
+    defaultValues: { quantity: 1, paymentDuration: '30' },
   });
   
   const selectedClientId = stepOneForm.watch('clientId');
   const selectedProductId = stepOneForm.watch('productId');
-  const { quantity } = stepTwoForm.watch();
+  const { quantity, paymentDuration, customDueDate } = stepTwoForm.watch();
 
   const clientsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
@@ -124,15 +124,35 @@ export function AddTransactionDialog({ isOpen, setIsOpen, onSuccess }: AddTransa
     products?.find(p => p.id === selectedProductId)
   , [products, selectedProductId]);
 
-  const totalAmount = (selectedProduct?.sellingPrice || 0) * (quantity || 0);
-  const totalProfit = ((selectedProduct?.sellingPrice || 0) - (selectedProduct?.purchasePrice || 0)) * (quantity || 0);
+  const { totalAmount, totalProfit } = useMemo(() => {
+    if (!selectedProduct || !quantity) {
+        return { totalAmount: 0, totalProfit: 0 };
+    }
+
+    const issueDate = new Date();
+    let finalDueDate: Date;
+    if (paymentDuration === 'custom' && customDueDate) {
+        finalDueDate = customDueDate;
+    } else {
+        finalDueDate = addDays(issueDate, parseInt(paymentDuration));
+    }
+    const days = differenceInDays(finalDueDate, issueDate);
+    const months = Math.max(1, Math.ceil(days / 30));
+
+    const singleMonthProfit = (selectedProduct.sellingPrice - selectedProduct.purchasePrice) * quantity;
+    const calculatedProfit = singleMonthProfit * months;
+    const calculatedTotalAmount = (selectedProduct.purchasePrice * quantity) + calculatedProfit;
+    
+    return { totalAmount: calculatedTotalAmount, totalProfit: calculatedProfit };
+  }, [selectedProduct, quantity, paymentDuration, customDueDate]);
+
 
   const goToNextStep = () => setStep(2);
   const goToPrevStep = () => setStep(1);
 
   const resetForms = () => {
     stepOneForm.reset();
-    stepTwoForm.reset();
+    stepTwoForm.reset({ quantity: 1, paymentDuration: '30' });
     setStep(1);
   };
   
@@ -162,7 +182,6 @@ export function AddTransactionDialog({ isOpen, setIsOpen, onSuccess }: AddTransa
     }
 
     const { clientId, newClientName, newClientPhone, referredBy } = stepOneForm.getValues();
-    const { paymentDuration, customDueDate } = stepTwoForm.getValues();
 
     const batch = writeBatch(firestore);
     let finalClientId = clientId;
@@ -201,7 +220,8 @@ export function AddTransactionDialog({ isOpen, setIsOpen, onSuccess }: AddTransa
         productName: selectedProduct.name,
         quantity,
         purchasePrice: selectedProduct.purchasePrice,
-        sellingPrice: selectedProduct.sellingPrice,
+        // The selling price stored is the *calculated* price for the full duration
+        sellingPrice: totalAmount / quantity,
         totalAmount,
         profit: totalProfit,
         issueDate: issueDate.toISOString(),
@@ -382,6 +402,8 @@ export function AddTransactionDialog({ isOpen, setIsOpen, onSuccess }: AddTransa
                           <SelectItem value="7">7 أيام</SelectItem>
                           <SelectItem value="15">15 يومًا</SelectItem>
                           <SelectItem value="30">شهر واحد</SelectItem>
+                          <SelectItem value="60">شهران</SelectItem>
+                          <SelectItem value="90">3 أشهر</SelectItem>
                           <SelectItem value="custom">تاريخ محدد</SelectItem>
                         </SelectContent>
                       </Select>
@@ -432,7 +454,7 @@ export function AddTransactionDialog({ isOpen, setIsOpen, onSuccess }: AddTransa
                             <span className="font-semibold">{formatCurrency(totalAmount)}</span>
                         </div>
                         <div className="flex justify-between">
-                            <span className="text-muted-foreground flex items-center gap-1"><Info className='size-4'/> الربح المباشر</span>
+                            <span className="text-muted-foreground flex items-center gap-1"><Info className='size-4'/> الربح المتوقع</span>
                             <span className="font-semibold text-green-600">{formatCurrency(totalProfit)}</span>
                         </div>
                     </div>

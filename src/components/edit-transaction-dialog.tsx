@@ -28,7 +28,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useFirebase, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, writeBatch, getDoc, collection } from 'firebase/firestore';
 import type { Transaction, Product, Client } from '@/lib/types';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, differenceInDays } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar as CalendarPicker } from './ui/calendar';
@@ -80,7 +80,7 @@ export function EditTransactionDialog({ isOpen, setIsOpen, transaction, onSucces
     resolver: zodResolver(formSchema),
   });
 
-  const selectedProductId = form.watch('productId');
+  const {productId: selectedProductId, quantity, purchasePrice, sellingPrice, issueDate, dueDate} = form.watch();
 
   useEffect(() => {
     if (transaction) {
@@ -95,16 +95,16 @@ export function EditTransactionDialog({ isOpen, setIsOpen, transaction, onSucces
     }
   }, [transaction, form]);
   
-  // Auto-fill prices when a new product is selected
+  // Auto-fill prices when a new product is selected from the list, but not for the initial load
   useEffect(() => {
-      if (selectedProductId && products) {
+      if (selectedProductId && products && selectedProductId !== transaction.productId) {
           const product = products.find(p => p.id === selectedProductId);
           if (product) {
               form.setValue('purchasePrice', product.purchasePrice);
               form.setValue('sellingPrice', product.sellingPrice);
           }
       }
-  }, [selectedProductId, products, form]);
+  }, [selectedProductId, products, form, transaction.productId]);
 
 
   const onSubmit = async (data: FormValues) => {
@@ -164,27 +164,33 @@ export function EditTransactionDialog({ isOpen, setIsOpen, transaction, onSucces
             // Decrement stock for new product
             batch.update(newProductRef, { stock: newProductData.stock - data.quantity });
         }
-
-        // 2. Update transaction
-        const newTotalAmount = data.quantity * data.sellingPrice;
-        const newProfit = (data.sellingPrice - data.purchasePrice) * data.quantity;
-        const amountDifference = newTotalAmount - transaction.totalAmount;
         
+        const days = differenceInDays(data.dueDate, data.issueDate);
+        const months = Math.max(1, Math.ceil(days / 30));
+        const originalProduct = products?.find(p => p.id === data.productId);
+        const baseSellingPrice = originalProduct?.sellingPrice || data.sellingPrice;
+        const basePurchasePrice = originalProduct?.purchasePrice || data.purchasePrice;
+
+        const singleMonthProfit = (baseSellingPrice - basePurchasePrice) * data.quantity;
+        const newProfit = singleMonthProfit * months;
+        const newTotalAmount = (basePurchasePrice * data.quantity) + newProfit;
+
+
         // Recalculate remaining amount based on paid amount and new total
-        const newRemainingAmount = Math.round((newTotalAmount - transaction.paidAmount) * 100) / 100;
+        const newRemainingAmount = Math.max(0, newTotalAmount - transaction.paidAmount);
 
         batch.update(transactionRef, {
             productId: data.productId,
             productName: newProductData.name,
             quantity: data.quantity,
-            purchasePrice: data.purchasePrice,
-            sellingPrice: data.sellingPrice,
+            purchasePrice: basePurchasePrice,
+            sellingPrice: newTotalAmount / data.quantity, // Calculated selling price per unit
             issueDate: data.issueDate.toISOString(),
             dueDate: data.dueDate.toISOString(),
             totalAmount: newTotalAmount,
             profit: newProfit,
             remainingAmount: newRemainingAmount,
-            status: data.dueDate < new Date() && newRemainingAmount > 0 ? 'overdue' : 'active',
+            status: data.dueDate < new Date() && newRemainingAmount > 0.01 ? 'overdue' : 'active',
         });
 
         // 3. Update client total due
@@ -271,7 +277,7 @@ export function EditTransactionDialog({ isOpen, setIsOpen, transaction, onSucces
                     name="sellingPrice"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel>سعر البيع</FormLabel>
+                        <FormLabel>سعر البيع (لشهر)</FormLabel>
                         <FormControl>
                             <Input type="number" {...field} />
                         </FormControl>
