@@ -18,6 +18,7 @@ export type Client = {
     totalDue: number; // Aggregated amount from all their active contracts
     createdAt: string;
     ownerId: string;
+    referredBy?: string; // ID of the referring client
 };
 
 // Represents a product the merchant sells
@@ -55,3 +56,4 @@ export type Transaction = {
 
   ownerId: string;
 };
+

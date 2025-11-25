@@ -32,7 +32,7 @@ import {
 } from '@/firebase';
 import { collection, doc, query, where, writeBatch, getDoc } from 'firebase/firestore';
 import type { Client, Transaction, Product } from '@/lib/types';
-import { Loader2, ArrowLeft, Phone, User, HandCoins, MoreVertical, Edit, Trash2, CheckCircle, Undo2 } from 'lucide-react';
+import { Loader2, ArrowLeft, Phone, User, HandCoins, MoreVertical, Edit, Trash2, CheckCircle, Undo2, Users } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -53,6 +53,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { AddOrEditClientDialog } from '@/components/add-client-dialog';
 import { EditTransactionDialog } from '@/components/edit-transaction-dialog';
+import Link from 'next/link';
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('fr-MR', {
@@ -292,6 +293,13 @@ export default function ClientDetailPage() {
   
   const { data: client, isLoading: isClientLoading, refetch: refetchClient } = useDoc<Client>(clientDocRef);
 
+  const referrerDocRef = useMemoFirebase(() => {
+    if (!firestore || !user?.uid || !client?.referredBy) return null;
+    return doc(firestore, 'users', user.uid, 'clients', client.referredBy);
+  }, [firestore, user?.uid, client?.referredBy]);
+  const { data: referrer, isLoading: isReferrerLoading } = useDoc<Client>(referrerDocRef);
+
+
   const transactionsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid || !clientId) return null;
     return query(
@@ -355,7 +363,7 @@ export default function ClientDetailPage() {
     }
   };
 
-  const isLoading = isClientLoading || areTransactionsLoading;
+  const isLoading = isClientLoading || areTransactionsLoading || isReferrerLoading;
   
   if (isLoading) {
     return (
@@ -389,12 +397,20 @@ export default function ClientDetailPage() {
           <h1 className="font-headline text-3xl font-bold tracking-tight flex items-center gap-2">
             <User/> {client.name}
           </h1>
-          {client.phone && (
-            <div className="flex items-center text-muted-foreground gap-2">
-                <Phone className='size-4'/>
-                <span dir="ltr">{client.phone}</span>
-            </div>
-          )}
+          <div className='flex items-center gap-4 text-muted-foreground'>
+            {client.phone && (
+                <div className="flex items-center gap-2">
+                    <Phone className='size-4'/>
+                    <span dir="ltr">{client.phone}</span>
+                </div>
+            )}
+             {referrer && (
+                <div className="flex items-center gap-2">
+                    <Users className='size-4'/>
+                    <span>أتى عن طريق: <Link href={`/clients/${referrer.id}`} className='font-medium text-primary hover:underline'>{referrer.name}</Link></span>
+                </div>
+             )}
+          </div>
         </div>
         <Button variant="outline" onClick={() => setClientDialogOpen(true)}>
             <Edit className="me-2" /> تعديل الزبون

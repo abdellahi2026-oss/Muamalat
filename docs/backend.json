@@ -1,4 +1,5 @@
 
+
 {
   "entities": {
     "User": {
@@ -27,7 +28,8 @@
         "phone": { "type": "string", "description": "Phone number of the client." },
         "totalDue": { "type": "number", "description": "Aggregated amount from all their active contracts." },
         "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the client was created." },
-        "ownerId": { "type": "string", "description": "The UID of the merchant who owns this client record." }
+        "ownerId": { "type": "string", "description": "The UID of the merchant who owns this client record." },
+        "referredBy": { "type": "string", "description": "Optional. The ID of the client who referred this client." }
       },
       "required": ["id", "name", "phone", "totalDue", "createdAt", "ownerId"]
     },

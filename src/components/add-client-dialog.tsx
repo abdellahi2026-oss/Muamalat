@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -25,13 +25,15 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useFirebase } from '@/firebase';
+import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc, setDoc, updateDoc } from 'firebase/firestore';
 import type { Client } from '@/lib/types';
+import { Combobox } from './ui/combobox';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'يجب أن يكون اسم الزبون حرفين على الأقل.' }),
   phone: z.string().min(1, { message: 'رقم الهاتف إجباري.' }),
+  referredBy: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -50,29 +52,54 @@ export function AddOrEditClientDialog({ isOpen, setIsOpen, client, onSuccess }: 
   
   const isEditMode = !!client;
 
+  const clientsQuery = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return collection(firestore, 'users', user.uid, 'clients');
+  }, [firestore, user?.uid]);
+  const { data: clients, refetch: refetchClients } = useCollection<Client>(clientsQuery);
+  
+  const referrerOptions = useMemo(() => 
+    (clients || [])
+      .filter(c => c.id !== client?.id) // Exclude self from referrers
+      .map(c => ({ value: c.id, label: c.name }))
+  , [clients, client]);
+
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { name: '', phone: '' },
+    defaultValues: { name: '', phone: '', referredBy: '' },
   });
   
   useEffect(() => {
     if (isOpen) {
-      if (isEditMode) {
-        form.reset({ name: client.name, phone: client.phone });
-      } else {
-        form.reset({ name: '', phone: '' });
-      }
+        if (refetchClients) refetchClients();
+        if (isEditMode) {
+            form.reset({ name: client.name, phone: client.phone, referredBy: client.referredBy || '' });
+        } else {
+            form.reset({ name: '', phone: '', referredBy: '' });
+        }
     }
-  }, [isOpen, client, isEditMode, form]);
+  }, [isOpen, client, isEditMode, form, refetchClients]);
 
   const onSubmit = async (data: FormValues) => {
     if (!firestore || !user) return;
     setIsSubmitting(true);
     
     try {
+        const clientData: Partial<Client> = {
+            name: data.name,
+            phone: data.phone,
+        };
+        if (data.referredBy) {
+            clientData.referredBy = data.referredBy;
+        } else {
+            clientData.referredBy = ''; // Ensure field is removed if empty
+        }
+
+
         if (isEditMode) {
             const clientRef = doc(firestore, 'users', user.uid, 'clients', client.id);
-            await updateDoc(clientRef, data);
+            await updateDoc(clientRef, clientData);
             toast({ title: "تم تحديث الزبون بنجاح!" });
         } else {
             const newClientRef = doc(collection(firestore, 'users', user.uid, 'clients'));
@@ -83,6 +110,7 @@ export function AddOrEditClientDialog({ isOpen, setIsOpen, client, onSuccess }: 
                 totalDue: 0,
                 createdAt: new Date().toISOString(),
                 ownerId: user.uid,
+                ...(data.referredBy && { referredBy: data.referredBy }),
             };
             await setDoc(newClientRef, newClient);
             toast({ title: "تمت إضافة الزبون بنجاح!" });
@@ -134,6 +162,23 @@ export function AddOrEditClientDialog({ isOpen, setIsOpen, client, onSuccess }: 
                   <FormMessage />
                 </FormItem>
               )}
+            />
+             <FormField
+                control={form.control}
+                name="referredBy"
+                render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                    <FormLabel>الزبون المُحيل (اختياري)</FormLabel>
+                    <Combobox
+                        options={referrerOptions}
+                        value={field.value || ''}
+                        onChange={field.onChange}
+                        placeholder="ابحث عن زبون حالي..."
+                        notFoundText="لم يتم العثور على زبون."
+                    />
+                    <FormMessage />
+                    </FormItem>
+                )}
             />
             <DialogFooter>
                <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={isSubmitting}>إلغاء</Button>

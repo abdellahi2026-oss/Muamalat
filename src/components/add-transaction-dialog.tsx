@@ -39,6 +39,7 @@ const stepOneSchema = z.object({
   clientId: z.string().min(1, { message: 'يجب اختيار زبون.' }),
   newClientName: z.string().optional(),
   newClientPhone: z.string().optional(),
+  referredBy: z.string().optional(),
   productId: z.string().min(1, { message: 'يجب اختيار منتج.' }),
 }).refine(data => {
     if (data.clientId === 'new-client') {
@@ -80,7 +81,7 @@ export function AddTransactionDialog({ isOpen, setIsOpen, onSuccess }: AddTransa
 
   const stepOneForm = useForm<StepOneValues>({
     resolver: zodResolver(stepOneSchema),
-    defaultValues: { clientId: '', productId: '', newClientName: '', newClientPhone: '' },
+    defaultValues: { clientId: '', productId: '', newClientName: '', newClientPhone: '', referredBy: '' },
   });
 
   const stepTwoForm = useForm<StepTwoValues>({
@@ -109,6 +110,11 @@ export function AddTransactionDialog({ isOpen, setIsOpen, onSuccess }: AddTransa
     options.unshift({ value: 'new-client', label: 'إضافة زبون جديد...' });
     return options;
   }, [clients]);
+
+  const referrerOptions = useMemo(() => 
+    (clients || []).map(c => ({ value: c.id, label: c.name }))
+  , [clients]);
+
 
   const productOptions = useMemo(() => 
     (products || []).map(p => ({ value: p.id, label: `${p.name} (متوفر: ${p.stock})` }))
@@ -155,7 +161,7 @@ export function AddTransactionDialog({ isOpen, setIsOpen, onSuccess }: AddTransa
         return;
     }
 
-    const { clientId, newClientName, newClientPhone } = stepOneForm.getValues();
+    const { clientId, newClientName, newClientPhone, referredBy } = stepOneForm.getValues();
     const { paymentDuration, customDueDate } = stepTwoForm.getValues();
 
     const batch = writeBatch(firestore);
@@ -174,6 +180,9 @@ export function AddTransactionDialog({ isOpen, setIsOpen, onSuccess }: AddTransa
         createdAt: new Date().toISOString(),
         ownerId: user.uid,
       };
+      if (referredBy) {
+        newClient.referredBy = referredBy;
+      }
       batch.set(newClientRef, newClient);
     }
 
@@ -240,7 +249,7 @@ export function AddTransactionDialog({ isOpen, setIsOpen, onSuccess }: AddTransa
 
   return (
     <Dialog open={isOpen} onOpenChange={(o) => { setIsOpen(o); if (!o) resetForms(); }}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center">
              {step === 2 && (
@@ -277,26 +286,45 @@ export function AddTransactionDialog({ isOpen, setIsOpen, onSuccess }: AddTransa
                 />
 
                 {selectedClientId === 'new-client' && (
-                    <div className="grid grid-cols-2 gap-4 rounded-md border bg-muted/50 p-4">
+                    <div className="space-y-4 rounded-md border bg-muted/50 p-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                                control={stepOneForm.control}
+                                name="newClientName"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>اسم الزبون الجديد</FormLabel>
+                                        <FormControl><Input placeholder="الاسم الكامل" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={stepOneForm.control}
+                                name="newClientPhone"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>هاتف الزبون</FormLabel>
+                                        <FormControl><Input placeholder="رقم الهاتف" {...field} dir="ltr"/></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
                         <FormField
                             control={stepOneForm.control}
-                            name="newClientName"
+                            name="referredBy"
                             render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>اسم الزبون الجديد</FormLabel>
-                                    <FormControl><Input placeholder="الاسم الكامل" {...field} /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={stepOneForm.control}
-                            name="newClientPhone"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>هاتف الزبون</FormLabel>
-                                    <FormControl><Input placeholder="رقم الهاتف" {...field} dir="ltr"/></FormControl>
-                                    <FormMessage />
+                                <FormItem className="flex flex-col">
+                                <FormLabel>الزبون المُحيل (اختياري)</FormLabel>
+                                <Combobox
+                                    options={referrerOptions}
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    placeholder="ابحث عن زبون حالي..."
+                                    notFoundText="لم يتم العثور على زبون."
+                                />
+                                <FormMessage />
                                 </FormItem>
                             )}
                         />
