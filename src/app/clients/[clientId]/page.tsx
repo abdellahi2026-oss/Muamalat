@@ -121,7 +121,7 @@ function RegisterPaymentDialog({ client, transactions, onPaymentSuccess }: { cli
             const transactionRef = doc(firestore, 'users', user.uid, 'transactions', trans.id);
             const newPaidAmount = trans.paidAmount + paymentForThisTransaction;
             const newRemainingAmount = trans.remainingAmount - paymentForThisTransaction;
-            const newStatus = newRemainingAmount <= 0 ? 'completed' : trans.status;
+            const newStatus = newRemainingAmount <= 0.001 ? 'completed' : trans.status;
 
             batch.update(transactionRef, {
                 paidAmount: newPaidAmount,
@@ -493,5 +493,3 @@ export default function ClientDetailPage() {
     </>
   );
 }
-
-    
