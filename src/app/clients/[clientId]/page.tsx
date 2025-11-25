@@ -96,8 +96,7 @@ function RegisterPaymentDialog({ client, transactions, onPaymentSuccess }: { cli
             return;
         }
 
-        // Use a small epsilon for floating point comparisons
-        if (amount > client.totalDue + 0.01) {
+        if (amount > client.totalDue + 0.001) { 
             toast({ variant: 'destructive', title: 'المبلغ المدفوع أكبر من إجمالي المستحقات.'});
             return;
         }
@@ -249,7 +248,7 @@ function TransactionActions({ transaction, onEdit, onDelete, onStatusChange }: {
           <AlertDialogHeader>
             <AlertDialogTitle>هل أنت متأكد من إنهاء العقد؟</AlertDialogTitle>
              <AlertDialogDescription>
-              سيؤدي هذا الإجراء إلى تغيير حالة العقد إلى "مكتمل".
+              سيؤدي هذا الإجراء إلى تغيير حالة العقد إلى "مكتمل". لن يؤثر هذا على الدين الإجمالي للعميل إذا لم يتم سداد المبلغ بالكامل.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -558,6 +557,8 @@ export default function ClientDetailPage() {
   );
 }
 
+
+    
 
     
 
