@@ -168,6 +168,7 @@ export function EditTransactionDialog({ isOpen, setIsOpen, transaction, onSucces
         const days = differenceInDays(data.dueDate, data.issueDate);
         const months = Math.max(1, Math.ceil(days / 30));
         const originalProduct = products?.find(p => p.id === data.productId);
+        // Use the base prices from the product data, not the form, to ensure profit is calculated correctly
         const baseSellingPrice = originalProduct?.sellingPrice || data.sellingPrice;
         const basePurchasePrice = originalProduct?.purchasePrice || data.purchasePrice;
 
