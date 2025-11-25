@@ -207,7 +207,7 @@ export default function SettingsPage() {
                                         <FormItem>
                                             <FormLabel>كلمة المرور الحالية</FormLabel>
                                             <FormControl>
-                                                <Input type="password" {...field} dir="ltr" className="text-left" />
+                                                <Input type="password" {...field} dir="ltr" />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -220,7 +220,7 @@ export default function SettingsPage() {
                                         <FormItem>
                                             <FormLabel>كلمة المرور الجديدة</FormLabel>
                                             <FormControl>
-                                                <Input type="password" {...field} dir="ltr" className="text-left" />
+                                                <Input type="password" {...field} dir="ltr" />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -233,7 +233,7 @@ export default function SettingsPage() {
                                         <FormItem>
                                             <FormLabel>تأكيد كلمة المرور الجديدة</FormLabel>
                                             <FormControl>
-                                                <Input type="password" {...field} dir="ltr" className="text-left" />
+                                                <Input type="password" {...field} dir="ltr" />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
