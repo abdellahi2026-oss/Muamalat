@@ -25,19 +25,28 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Loader2, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc, writeBatch, getDoc } from 'firebase/firestore';
+import { useFirebase, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { doc, writeBatch, getDoc, collection } from 'firebase/firestore';
 import type { Transaction, Product, Client } from '@/lib/types';
 import { format, parseISO } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar as CalendarPicker } from './ui/calendar';
 import { cn } from '@/lib/utils';
+import { Combobox } from './ui/combobox';
 
 const formSchema = z.object({
+  productId: z.string().min(1, { message: 'يجب اختيار منتج.' }),
   quantity: z.coerce.number().min(1, { message: 'الكمية يجب أن تكون 1 على الأقل.' }),
+  purchasePrice: z.coerce.number().min(0, { message: 'سعر الشراء إجباري.' }),
+  sellingPrice: z.coerce.number().min(0, { message: 'سعر البيع إجباري.' }),
+  issueDate: z.date({ required_error: 'تاريخ الإنشاء مطلوب.' }),
   dueDate: z.date({ required_error: 'تاريخ الاستحقاق مطلوب.' }),
+}).refine(data => data.sellingPrice > data.purchasePrice, {
+    message: "سعر البيع يجب أن يكون أعلى من سعر الشراء.",
+    path: ['sellingPrice'],
 });
+
 
 type FormValues = z.infer<typeof formSchema>;
 
@@ -53,61 +62,122 @@ export function EditTransactionDialog({ isOpen, setIsOpen, transaction, onSucces
   const { toast } = useToast();
   const { firestore, user } = useFirebase();
 
-  const productRef = useMemoFirebase(() => {
-    if (!firestore || !user || !transaction) return null;
-    return doc(firestore, 'users', user.uid, 'products', transaction.productId);
-  }, [firestore, user, transaction]);
+  // Load all products for the combobox
+  const productsQuery = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return collection(firestore, 'users', user.uid, 'products');
+  }, [firestore, user?.uid]);
+  const { data: products } = useCollection<Product>(productsQuery);
 
-  const clientRef = useMemoFirebase(() => {
-    if (!firestore || !user || !transaction) return null;
-    return doc(firestore, 'users', user.uid, 'clients', transaction.clientId);
-  }, [firestore, user, transaction]);
-
-  const { data: product } = useDoc<Product>(productRef);
-  const { data: client } = useDoc<Client>(clientRef);
+  const productOptions = useMemo(() => 
+    (products || []).map(p => ({ 
+        value: p.id, 
+        label: `${p.name} (متوفر: ${p.stock})` 
+    }))
+  , [products]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
   });
 
+  const selectedProductId = form.watch('productId');
+
   useEffect(() => {
     if (transaction) {
       form.reset({
+        productId: transaction.productId,
         quantity: transaction.quantity,
+        purchasePrice: transaction.purchasePrice,
+        sellingPrice: transaction.sellingPrice,
+        issueDate: parseISO(transaction.issueDate),
         dueDate: parseISO(transaction.dueDate),
       });
     }
   }, [transaction, form]);
+  
+  // Auto-fill prices when a new product is selected
+  useEffect(() => {
+      if (selectedProductId && products) {
+          const product = products.find(p => p.id === selectedProductId);
+          if (product) {
+              form.setValue('purchasePrice', product.purchasePrice);
+              form.setValue('sellingPrice', product.sellingPrice);
+          }
+      }
+  }, [selectedProductId, products, form]);
+
 
   const onSubmit = async (data: FormValues) => {
-    if (!firestore || !user || !transaction || !product || !client) {
-        toast({ variant: 'destructive', title: 'خطأ', description: 'لا يمكن تحميل بيانات المنتج أو الزبون.' });
-        return;
-    }
+    if (!firestore || !user || !transaction) return;
     setIsSubmitting(true);
     
     const batch = writeBatch(firestore);
 
     try {
         const transactionRef = doc(firestore, 'users', user.uid, 'transactions', transaction.id);
+        const clientRef = doc(firestore, 'users', user.uid, 'clients', transaction.clientId);
         
-        const quantityDifference = data.quantity - transaction.quantity;
-        
-        // Check stock
-        if (quantityDifference > product.stock) {
-            form.setError('quantity', { message: 'الكمية الإضافية المطلوبة أكبر من المخزون المتاح.' });
+        const oldProductRef = doc(firestore, 'users', user.uid, 'products', transaction.productId);
+        const newProductRef = doc(firestore, 'users', user.uid, 'products', data.productId);
+
+        const [clientDoc, oldProductDoc, newProductDoc] = await Promise.all([
+            getDoc(clientRef),
+            getDoc(oldProductRef),
+            getDoc(newProductRef)
+        ]);
+
+        if (!clientDoc.exists() || !oldProductDoc.exists() || !newProductDoc.exists()) {
+            toast({ variant: 'destructive', title: 'خطأ', description: 'لا يمكن العثور على بيانات العميل أو المنتج.' });
             setIsSubmitting(false);
             return;
         }
 
-        const newTotalAmount = data.quantity * transaction.sellingPrice;
-        const newProfit = (transaction.sellingPrice - transaction.purchasePrice) * data.quantity;
+        const clientData = clientDoc.data() as Client;
+        const oldProductData = oldProductDoc.data() as Product;
+        const newProductData = newProductDoc.data() as Product;
+
+        const quantityDifference = data.quantity - transaction.quantity;
+
+        // Stock validation
+        if (data.productId === transaction.productId) { // Same product
+            if (quantityDifference > oldProductData.stock) {
+                 form.setError('quantity', { message: `الكمية الإضافية تتجاوز المخزون (${oldProductData.stock} متاح).` });
+                 setIsSubmitting(false);
+                 return;
+            }
+        } else { // Different product
+            if (data.quantity > newProductData.stock) {
+                 form.setError('quantity', { message: `الكمية المطلوبة تتجاوز مخزون المنتج الجديد (${newProductData.stock} متاح).` });
+                 setIsSubmitting(false);
+                 return;
+            }
+        }
+        
+        // --- Batch updates ---
+        
+        // 1. Update stock
+        if (data.productId === transaction.productId) {
+            batch.update(oldProductRef, { stock: oldProductData.stock - quantityDifference });
+        } else {
+            // Restore stock for old product
+            batch.update(oldProductRef, { stock: oldProductData.stock + transaction.quantity });
+            // Decrement stock for new product
+            batch.update(newProductRef, { stock: newProductData.stock - data.quantity });
+        }
+
+        // 2. Update transaction
+        const newTotalAmount = data.quantity * data.sellingPrice;
+        const newProfit = (data.sellingPrice - data.purchasePrice) * data.quantity;
         const amountDifference = newTotalAmount - transaction.totalAmount;
         const newRemainingAmount = transaction.remainingAmount + amountDifference;
-        
-        // 1. Update transaction
+
         batch.update(transactionRef, {
+            productId: data.productId,
+            productName: newProductData.name,
             quantity: data.quantity,
+            purchasePrice: data.purchasePrice,
+            sellingPrice: data.sellingPrice,
+            issueDate: data.issueDate.toISOString(),
             dueDate: data.dueDate.toISOString(),
             totalAmount: newTotalAmount,
             profit: newProfit,
@@ -115,14 +185,9 @@ export function EditTransactionDialog({ isOpen, setIsOpen, transaction, onSucces
             status: data.dueDate < new Date() && newRemainingAmount > 0 ? 'overdue' : 'active',
         });
 
-        // 2. Update product stock
-        batch.update(productRef!, {
-            stock: product.stock - quantityDifference
-        });
-
         // 3. Update client total due
-        batch.update(clientRef!, {
-            totalDue: client.totalDue + amountDifference
+        batch.update(clientRef, {
+            totalDue: clientData.totalDue + amountDifference
         });
 
         await batch.commit();
@@ -140,11 +205,11 @@ export function EditTransactionDialog({ isOpen, setIsOpen, transaction, onSucces
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>تعديل المعاملة</DialogTitle>
           <DialogDescription>
-            تعديل الكمية أو تمديد تاريخ الاستحقاق للمعاملة.
+            تعديل تفاصيل المعاملة. سيتم تحديث المخزون وديون العميل تلقائيًا.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -152,6 +217,24 @@ export function EditTransactionDialog({ isOpen, setIsOpen, transaction, onSucces
             onSubmit={form.handleSubmit(onSubmit)}
             className="grid gap-4 py-4"
           >
+            <FormField
+                control={form.control}
+                name="productId"
+                render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                    <FormLabel>المنتج</FormLabel>
+                    <Combobox
+                        options={productOptions}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="ابحث عن منتج..."
+                        notFoundText="لا توجد منتجات."
+                    />
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
+            
             <FormField
               control={form.control}
               name="quantity"
@@ -165,39 +248,85 @@ export function EditTransactionDialog({ isOpen, setIsOpen, transaction, onSucces
                 </FormItem>
               )}
             />
-            <FormField
-                control={form.control}
-                name="dueDate"
-                render={({ field }) => (
-                <FormItem className="flex flex-col">
-                    <FormLabel>تاريخ الاستحقاق الجديد</FormLabel>
-                     <Popover modal={true}>
-                        <PopoverTrigger asChild>
-                            <FormControl>
-                            <Button
-                                variant={'outline'}
-                                className={cn('w-full ps-3 text-start font-normal', !field.value && 'text-muted-foreground')}
-                            >
-                                {field.value ? format(field.value, 'PPP', { locale: ar }) : <span>اختر تاريخًا</span>}
-                                <Calendar className="ms-auto h-4 w-4 opacity-50" />
-                            </Button>
-                            </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                            <CalendarPicker
-                                mode="single"
-                                selected={field.value}
-                                onSelect={field.onChange}
-                                disabled={(date) => date < new Date(transaction.issueDate)}
-                                initialFocus
-                                locale={ar}
-                            />
-                        </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
+
+            <div className="grid grid-cols-2 gap-4">
+                 <FormField
+                    control={form.control}
+                    name="purchasePrice"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>سعر الشراء</FormLabel>
+                        <FormControl>
+                            <Input type="number" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="sellingPrice"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>سعر البيع</FormLabel>
+                        <FormControl>
+                            <Input type="number" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+                <FormField
+                    control={form.control}
+                    name="issueDate"
+                    render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                        <FormLabel>تاريخ الإنشاء</FormLabel>
+                        <Popover modal={true}>
+                            <PopoverTrigger asChild>
+                                <FormControl>
+                                <Button variant={'outline'} className={cn('w-full ps-3 text-start font-normal', !field.value && 'text-muted-foreground')}>
+                                    {field.value ? format(field.value, 'PPP', { locale: ar }) : <span>اختر تاريخًا</span>}
+                                    <Calendar className="ms-auto h-4 w-4 opacity-50" />
+                                </Button>
+                                </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <CalendarPicker mode="single" selected={field.value} onSelect={field.onChange} initialFocus locale={ar} />
+                            </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="dueDate"
+                    render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                        <FormLabel>تاريخ الاستحقاق</FormLabel>
+                        <Popover modal={true}>
+                            <PopoverTrigger asChild>
+                                <FormControl>
+                                <Button variant={'outline'} className={cn('w-full ps-3 text-start font-normal', !field.value && 'text-muted-foreground')}>
+                                    {field.value ? format(field.value, 'PPP', { locale: ar }) : <span>اختر تاريخًا</span>}
+                                    <Calendar className="ms-auto h-4 w-4 opacity-50" />
+                                </Button>
+                                </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <CalendarPicker mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < form.getValues('issueDate')} initialFocus locale={ar} />
+                            </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+            </div>
+
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={isSubmitting}>إلغاء</Button>
               <Button type="submit" disabled={isSubmitting}>
